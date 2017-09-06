@@ -22,7 +22,7 @@ const int DXREG = 3;
 const int HALT = 5;
 const int MOVREG = 192;
 const int ADD = 160;
-const int MOVMEM = 193;
+const int MOVMEM = 224;
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -149,9 +149,10 @@ void convertToMachineCode( ifstream &fin )
 		}
 		else if(commArr[1][0] == '[') // The second arg is an address 
 		{
+			cout << "The second arg is an address" << endl;
 			machineCode = MOVMEM;
 			machineCode += (whichReg( oper2[0] ) << 3);
-			machineCode += 7;
+			machineCode += 6;
 			memory[address] = machineCode;
 			address++;
 			memory[address] = stripBrackets(commArr[1]);
@@ -337,7 +338,7 @@ void runCode( )
 	while(memory[address] != 5)  //until HALT
 	{
 		//cout << "contents of memory at " << address << " is " << memory[address] << endl;
-		topBits = (memory[address] & 192);
+		topBits = (memory[address] & 224);
 		midBits = (memory[address] & 24) >> 3;
 		botBits = memory[address] & 7;
 		//cout << "topBit :" << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
@@ -371,6 +372,7 @@ void runCode( )
 		{
 			if(botBits == 6) // the command is to move into an address
 			{
+				cout << "Moving a register into memory" << endl;
 				switch(midBits)
 				{
 					case(0):
