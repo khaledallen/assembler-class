@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "testFile1.asm";
+char ASM_FILE_NAME[] = "kallen1.asm";
 
 const int MAX = 150;  //size of simulators memory
 const int COL = 7;	 //number of columns for output
