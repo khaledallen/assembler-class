@@ -45,26 +45,39 @@ void convertToNumber(string line, int &start, int &value);
 int whichReg(char regLetter);  //returns the number of the letter registar
 void fillMemory( );
 void runCode( );
-//void convertToMachineCode( ifstream &fin );
-void splitCommand( string line, string &command, string &oper1, string &oper2 )
+void changeToLowerCase(string &line);
+void splitCommand( string &line, string &command )
 {
 	int space = line.find( ' ' );
-	cout << "the space is at " << space;
-	//command.assign( line, 0, space );
 	command = line.substr( 0, space );
-	cout << command;
-
+	line = line.substr(space + 1);
 }
 void convertToMachineCode( ifstream &fin )
 {
 	string line;  //full command
+	string commArr[3];
 	string command; //the asm commmand
 	string oper1, oper2;  //the two operands could be empty
 	int machineCode = 0;
-	//getline( fin, line, '\n' );
-	//changeToLowerCase( line );
-	line = "mov Ax 19";
-	splitCommand( line, command, oper1, oper2 );
+	getline( fin, line, '\n' );
+	changeToLowerCase( line );
+
+	int i = 0;
+
+	while( line.length() > 0 || i < 2)
+	{
+		splitCommand( line, command );
+		commArr[i] = command; 
+		if (i==2){ line = "";}
+		i++;
+	}
+
+	command = commArr[0];
+	if(i > 0)
+		oper1 = commArr[1];
+	if(i > 1)
+		oper2 = commArr[2];
+	
 	if (command[0] == 'h')  //halt
 	{
 		memory[address] = HALT;
@@ -73,11 +86,15 @@ void convertToMachineCode( ifstream &fin )
 	if (command[0] == 'm')  //move into a register
 	{
 		machineCode = MOVREG;
-//		machineCode += (whichReg( oper1[0] ) << 3);
-//		machineCode += oper2
+		machineCode += (whichReg( oper1[0] ) << 3);
+		machineCode += 7; 
+		memory[address] = machineCode;
+		address++;
+		 //convertToNumber(commArr[2], 0, memory[address]);
+		 memory[address] = stoi(commArr[2]);
+		address++;
 	}
 	cout << endl;
-	printMemoryDump( );
 	//else if (command)
 
 
@@ -87,7 +104,9 @@ int main( )
 {
 	printMemoryDump( );
 	fillMemory( );
+	printMemoryDump( );
 	runCode( );
+	printMemoryDump( );
 	cout << endl;
 	system( "pause" );
 	return 0;
@@ -100,8 +119,7 @@ void fillMemory( )
 {
 	address = 0;
 	ifstream fin;
-	convertToMachineCode( fin );
-/*	//recommend changeing so you can type in file name
+	//recommend changeing so you can type in file name
 	fin.open( ASM_FILE_NAME );
 	if (fin.fail( ))
 	{
@@ -110,14 +128,12 @@ void fillMemory( )
 		exit( 1 );
 	}
 
-	for (int i = 0; i< MAX; i++)
+	for (int i = 0; i< MAX && !fin.fail( ); i++)
 	{
-		//cout<<"\n\n"<< i <<"\n";
-		
 		convertToMachineCode( fin );
-	//}
+	}
 	//cout<<"memory filled";
-	*/
+	
 }
 
 
@@ -262,4 +278,41 @@ void changeToLowerCase(string &line)
 void runCode( )
 {
 	// needs to be written
+	address = 0;
+cout << "address is " << address << endl;
+	int topBits, midBits, botBits;
+	while(memory[address] != 5)  //until HALT
+	{
+		cout << "contents of memory at " << address << " is " << memory[address] << endl;
+		topBits = (memory[address] & 192);
+		midBits = (memory[address] & 24) >> 3;
+		botBits = memory[address] & 7;
+		cout << "topBit :" << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
+
+		if(topBits ==  MOVREG)
+		{
+			cout << "The command is to move into a register" << endl;
+			if(botBits == 7)
+			{
+				cout << "The command is to move a constant " << endl;
+				switch(midBits){
+					case(0):
+						cout << "moving into AX" << endl;
+						regis.AX = memory[address+1];
+						break;
+					case(1):
+						regis.BX = memory[address+1];
+						break;
+					case(2):
+						regis.CX = memory[address+1];
+						break;
+					case(3):
+						regis.DX = memory[address+1];
+						break;
+				}
+				address++;
+			}
+		}
+		address++;
+	}
 }
