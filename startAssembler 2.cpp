@@ -279,25 +279,23 @@ void runCode( )
 {
 	// needs to be written
 	address = 0;
-cout << "address is " << address << endl;
 	int topBits, midBits, botBits;
 	while(memory[address] != 5)  //until HALT
 	{
-		cout << "contents of memory at " << address << " is " << memory[address] << endl;
+		//cout << "contents of memory at " << address << " is " << memory[address] << endl;
 		topBits = (memory[address] & 192);
 		midBits = (memory[address] & 24) >> 3;
 		botBits = memory[address] & 7;
-		cout << "topBit :" << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
+		//cout << "topBit :" << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
 
 		if(topBits ==  MOVREG)
 		{
-			cout << "The command is to move into a register" << endl;
+		//	cout << "The command is to move into a register" << endl;
 			if(botBits == 7)
 			{
-				cout << "The command is to move a constant " << endl;
+		//		cout << "The command is to move a constant " << endl;
 				switch(midBits){
 					case(0):
-						cout << "moving into AX" << endl;
 						regis.AX = memory[address+1];
 						break;
 					case(1):
