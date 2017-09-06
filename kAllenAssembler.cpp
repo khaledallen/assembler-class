@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen1.asm";
+char ASM_FILE_NAME[] = "kallen2.asm";
 
 const int MAX = 150;  //size of simulators memory
 const int COL = 7;	 //number of columns for output
@@ -21,6 +21,8 @@ const int DXREG = 3;
          //commands
 const int HALT = 5;
 const int MOVREG = 192;
+const int ADD = 160;
+const int MOVMEM = 193;
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -47,6 +49,7 @@ void fillMemory( );
 void runCode( );
 void changeToLowerCase(string &line);
 bool isNumber(string string);
+int stripBrackets(string address);
 
 int main( )
 {
@@ -132,22 +135,27 @@ void convertToMachineCode( ifstream &fin )
 		memory[address] = HALT;
 		address++;
 	}
-	if (command[0] == 'm')  //move into a register
+	if (command[0] == 'm')  //move
 	{
-		machineCode = MOVREG;
-		machineCode += (whichReg( oper1[0] ) << 3);
 		if(isNumber(commArr[2]))
 		{
+			machineCode = MOVREG;
+			machineCode += (whichReg( oper1[0] ) << 3);
 			machineCode += 7; 
 			memory[address] = machineCode;
 			address++;
 			memory[address] = stoi(commArr[2]);
 			address++;
 		}
-		else // NEED TO ADD HOW TO HANDLE IF THE THIRD ARGUMENT IS NOT A NUMBER
+		else if(commArr[1][0] == '[') // The second arg is an address 
 		{
-			cout << "Error: This assembler can only insert constants into registers at this time. Please check your asm file." << endl;
-			exit(1);
+			machineCode = MOVMEM;
+			machineCode += (whichReg( oper2[0] ) << 3);
+			machineCode += 7;
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stripBrackets(commArr[1]);
+			address++;
 		}
 		cout << "now add address " << address << endl;
 		 //convertToNumber(commArr[2], 0, memory[address]);
@@ -157,6 +165,21 @@ void convertToMachineCode( ifstream &fin )
 
 
 }
+
+int stripBrackets(string address)
+{
+	string temp;
+	int i = 0;
+
+	for(i = 0; i < address.length(); i++) {
+		if(address[i] == '[' || address[i] == ']' ) {
+			i++;
+		}
+		temp += address[i];
+	}
+	return stoi(temp);
+}	
+	
 
 /************************************************************/
 /*whichReg																	*/
