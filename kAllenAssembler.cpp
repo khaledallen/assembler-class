@@ -157,8 +157,6 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = stripBrackets(commArr[1]);
 			address++;
 		}
-		cout << "now add address " << address << endl;
-		 //convertToNumber(commArr[2], 0, memory[address]);
 	}
 	cout << endl;
 	//else if (command)
@@ -369,5 +367,18 @@ void runCode( )
 			}
 		}
 		address++;
+		if(topBits == MOVMEM)
+		{
+			if(botBits == 6) // the command is to move into an address
+			{
+				switch(midBits)
+				{
+					case(0):
+						memory[memory[address+1]] = regis.AX;
+						break;
+				}
+				address++;
+			}
+		}
 	}
 }
