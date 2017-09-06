@@ -46,59 +46,7 @@ int whichReg(char regLetter);  //returns the number of the letter registar
 void fillMemory( );
 void runCode( );
 void changeToLowerCase(string &line);
-void splitCommand( string &line, string &command )
-{
-	int space = line.find( ' ' );
-	command = line.substr( 0, space );
-	line = line.substr(space + 1);
-}
-void convertToMachineCode( ifstream &fin )
-{
-	string line;  //full command
-	string commArr[3];
-	string command; //the asm commmand
-	string oper1, oper2;  //the two operands could be empty
-	int machineCode = 0;
-	getline( fin, line, '\n' );
-	changeToLowerCase( line );
-
-	int i = 0;
-
-	while( line.length() > 0 || i < 2)
-	{
-		splitCommand( line, command );
-		commArr[i] = command; 
-		if (i==2){ line = "";}
-		i++;
-	}
-
-	command = commArr[0];
-	if(i > 0)
-		oper1 = commArr[1];
-	if(i > 1)
-		oper2 = commArr[2];
-	
-	if (command[0] == 'h')  //halt
-	{
-		memory[address] = HALT;
-		address++;
-	}
-	if (command[0] == 'm')  //move into a register
-	{
-		machineCode = MOVREG;
-		machineCode += (whichReg( oper1[0] ) << 3);
-		machineCode += 7; 
-		memory[address] = machineCode;
-		address++;
-		 //convertToNumber(commArr[2], 0, memory[address]);
-		 memory[address] = stoi(commArr[2]);
-		address++;
-	}
-	cout << endl;
-	//else if (command)
-
-
-}
+bool isNumber(string string);
 
 int main( )
 {
@@ -136,6 +84,79 @@ void fillMemory( )
 	
 }
 
+/**************************************************/
+/* splitCommand
+ * parses the line of assembler code
+ * line - is the line to be parsed, it is returned 1 command shorter
+ * command - is the command that is returned, clipped off the end
+ */
+void splitCommand( string &line, string &command )
+{
+	int space = line.find( ' ' );
+	command = line.substr( 0, space );
+	line = line.substr(space + 1);
+}
+/***************************************************/
+/* convertToMachineCode
+ * processes a single line of asm code and converts it to machine values
+ * fin - is the asm file to be processed
+ */
+void convertToMachineCode( ifstream &fin )
+{
+	string line;  //full command
+	string commArr[3];
+	string command; //the asm commmand
+	string oper1, oper2;  //the two operands could be empty
+	int machineCode = 0;
+	getline( fin, line, '\n' );
+	changeToLowerCase( line );
+
+	int i = 0;
+
+	while( line.length() > 0 || i < 2)
+	{
+		splitCommand( line, command );
+		commArr[i] = command; 
+		if (i==2){ line = "";}
+		i++;
+	}
+
+	command = commArr[0];
+	if(i > 0)
+		oper1 = commArr[1];
+	if(i > 1)
+		oper2 = commArr[2];
+	
+	if (command[0] == 'h')  //halt
+	{
+		memory[address] = HALT;
+		address++;
+	}
+	if (command[0] == 'm')  //move into a register
+	{
+		machineCode = MOVREG;
+		machineCode += (whichReg( oper1[0] ) << 3);
+		if(isNumber(commArr[2]))
+		{
+			machineCode += 7; 
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stoi(commArr[2]);
+			address++;
+		}
+		else // NEED TO ADD HOW TO HANDLE IF THE THIRD ARGUMENT IS NOT A NUMBER
+		{
+			cout << "Error: This assembler can only insert constants into registers at this time. Please check your asm file." << endl;
+			exit(1);
+		}
+		cout << "now add address " << address << endl;
+		 //convertToNumber(commArr[2], 0, memory[address]);
+	}
+	cout << endl;
+	//else if (command)
+
+
+}
 
 /************************************************************/
 /*whichReg																	*/
@@ -275,9 +296,21 @@ void changeToLowerCase(string &line)
 
 }
 
+bool isNumber(string string)
+{
+	int i = 0, num;
+	for (i = 0; i < string.length(); i++ )
+	{
+		num = string[i];
+		cout << string[i] << num << endl;
+		if((num < 48 || num > 57) && num != 45)
+			return false;
+	}
+	return true;
+}
+
 void runCode( )
 {
-	// needs to be written
 	address = 0;
 	int topBits, midBits, botBits;
 	while(memory[address] != 5)  //until HALT
@@ -294,7 +327,8 @@ void runCode( )
 			if(botBits == 7)
 			{
 		//		cout << "The command is to move a constant " << endl;
-				switch(midBits){
+				switch(midBits)
+				{
 					case(0):
 						regis.AX = memory[address+1];
 						break;
