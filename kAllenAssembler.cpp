@@ -149,7 +149,6 @@ void convertToMachineCode( ifstream &fin )
 		}
 		else if(commArr[1][0] == '[') // The second arg is an address 
 		{
-			cout << "The second arg is an address" << endl;
 			machineCode = MOVMEM;
 			machineCode += (whichReg( oper2[0] ) << 3);
 			machineCode += 6;
@@ -159,6 +158,20 @@ void convertToMachineCode( ifstream &fin )
 			address++;
 		}
 	}
+	if (command[0] == 'a') //add
+	{
+		if(isNumber(commArr[2]))
+		{
+			machineCode = ADD;
+			machineCode += (whichReg ( oper1[0] )) << 3;
+			machineCode += 7;
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stoi(commArr[2]);
+			address++;
+		}
+	}
+					
 	cout << endl;
 	//else if (command)
 
@@ -393,5 +406,29 @@ void runCode( )
 			}
 			address++;
 		}
+		if(topBits == ADD)
+		{
+			if(botBits == 7) // add a constant
+			{
+				switch(midBits)
+				{
+					case(0):
+						regis.AX += memory[address+1];
+						break;
+					case(1):
+						regis.BX += memory[address+1];
+						break;
+					case(2):
+						regis.CX += memory[address+1];
+						break;
+					case(3):
+						regis.DX += memory[address+1];
+						break;
+				}
+				address++;
+			}
+			address++;
+		}
+
 	}
 }
