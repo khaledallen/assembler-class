@@ -366,21 +366,32 @@ void runCode( )
 				}
 				address++;
 			}
+			address++;
 		}
-		address++;
 		if(topBits == MOVMEM)
 		{
+			int targetAddress;
 			if(botBits == 6) // the command is to move into an address
 			{
-				cout << "Moving a register into memory" << endl;
+				targetAddress = memory[address + 1];
 				switch(midBits)
 				{
 					case(0):
-						memory[memory[address+1]] = regis.AX;
+						memory[targetAddress] = regis.AX;
+						break;
+					case(1):
+						memory[targetAddress] = regis.BX;
+						break;
+					case(2):
+						memory[targetAddress] = regis.CX;
+						break;
+					case(3):
+						memory[targetAddress] = regis.DX;
 						break;
 				}
 				address++;
 			}
+			address++;
 		}
 	}
 }
