@@ -7,22 +7,22 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen2.asm";
+char ASM_FILE_NAME[] = "kallen3.asm";
 
 const int MAX = 150;  //size of simulators memory
-const int COL = 7;	 //number of columns for output
+const int COL = 7;    //number of columns for output
 
-			//REGISTERS
+//REGISTERS
 const int AXREG = 0;
 const int BXREG = 1;
 const int CXREG = 2;
 const int DXREG = 3;
 
          //commands
-const int HALT = 5;
-const int MOVREG = 192;
-const int ADD = 160;
-const int MOVMEM = 224;
+const int HALT = 0x05;
+const int MOVREG = 0xc0; //192;
+const int ADD = 0xa0; 	 //160;
+const int MOVMEM = 0xe0; // 224;
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -63,9 +63,9 @@ int main( )
 	return 0;
 }
 /************************************************************/
-/*fillMemory																*/
-/*		changes the code to machine code and places the
-commands into the memory. */
+/*fillMemory						    */
+/*changes the code to machine code and places the
+ * commands into the memory. */
 void fillMemory( )
 {
 	address = 0;
@@ -155,6 +155,16 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = machineCode;
 			address++;
 			memory[address] = stripBrackets(commArr[1]);
+			address++;
+		}
+		else if(commArr[2][0] == '[') // The third arg is an address 
+		{
+			machineCode = MOVMEM;
+			machineCode += (whichReg( oper1[0] ) << 3);
+			machineCode += 0x06;
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stripBrackets(commArr[2]);
 			address++;
 		}
 	}
@@ -400,6 +410,27 @@ void runCode( )
 						break;
 					case(3):
 						memory[targetAddress] = regis.DX;
+						break;
+				}
+				address++;
+			}
+			else if(botBits <= 0x03) // it's one of the registers
+			{
+				targetAddress = memory[address+1];
+				cout << "Moving from memory address" << targetAddress;
+				switch(botBits)
+				{
+					case(0):
+						regis.AX = memory[targetAddress];
+						break;
+					case(1):
+						regis.BX = memory[targetAddress];
+						break;
+					case(2):
+						regis.CX = memory[targetAddress];
+						break;
+					case(3):
+						regis.DX = memory[targetAddress];
 						break;
 				}
 				address++;
