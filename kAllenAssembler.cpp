@@ -182,6 +182,14 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = stoi(commArr[2]);
 			address++;
 		}
+		else
+		{
+			machineCode = ADD;
+			machineCode += (whichReg ( oper1[0] )) << 3;
+			machineCode += (whichReg ( oper2[0] ));
+			memory[address] = machineCode;
+			address++;
+		}
 	}
 					
 	cout << endl;
@@ -396,9 +404,6 @@ void runCode( )
 			else if(botBits == 0x06) // it's one of the registers
 			{
 				targetAddress = memory[address+1];
-				cout << "Moving from memory address" << targetAddress;
-				string REGNAME = "AX";
-				cout << "I AM A TEST" << regis.REGNAME << endl;
 				switch(midBits)
 				{
 					case(0):
@@ -465,28 +470,62 @@ void runCode( )
 		}
 		if(topBits == ADD)
 		{
-			if(botBits == 7) // add a constant
+			switch(midBits)
 			{
-				switch(midBits)
-				{
-					case(0):
+				case(0):
+					if(botBits == 7)
+					{
 						regis.AX += memory[address+1];
-						break;
-					case(1):
+						address++;
+					}
+					if(botBits == 1)
+						regis.AX += regis.BX;
+					if(botBits == 2)
+						regis.AX += regis.CX;
+					if(botBits == 3)
+						regis.AX += regis.DX;
+					break;
+				case(1):
+					if(botBits == 7)
+					{
 						regis.BX += memory[address+1];
-						break;
-					case(2):
+						address++;
+					}
+					if(botBits == 0)
+						regis.BX += regis.AX;
+					if(botBits == 2)
+						regis.BX += regis.CX;
+					if(botBits == 3)
+						regis.BX += regis.DX;
+					break;
+				case(2):
+					if(botBits == 7)
+					{
 						regis.CX += memory[address+1];
-						break;
-					case(3):
+						address++;
+					}
+					if(botBits == 0)
+						regis.CX += regis.AX;
+					if(botBits == 1)
+						regis.CX += regis.BX;
+					if(botBits == 3)
+						regis.CX += regis.DX;
+					break;
+				case(3):
+					if(botBits == 7)
+					{
 						regis.DX += memory[address+1];
-						break;
-				}
-				address++;
+						address++;
+					}
+					if(botBits == 0)
+						regis.DX += regis.AX;
+					if(botBits == 1)
+						regis.DX += regis.BX;
+					if(botBits == 2)
+						regis.DX += regis.CX;
+					break;
 			}
-			address++;
+		address++;
 		}
-
-		cin.get();
 	}
 }
