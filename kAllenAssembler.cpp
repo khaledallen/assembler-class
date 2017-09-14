@@ -147,6 +147,17 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = stoi(commArr[2]);
 			address++;
 		}
+		else if(commArr[2][0] == '[') // The third arg is an address 
+		{
+			cout << "Found an address in the second arg" << endl;
+			machineCode = MOVREG;
+			machineCode += (whichReg( oper1[0] ) << 3);
+			machineCode += 0x06;
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stripBrackets(commArr[2]);
+			address++;
+		}
 		else if(commArr[1][0] == '[') // The second arg is an address 
 		{
 			machineCode = MOVMEM;
@@ -155,16 +166,6 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = machineCode;
 			address++;
 			memory[address] = stripBrackets(commArr[1]);
-			address++;
-		}
-		else if(commArr[2][0] == '[') // The third arg is an address 
-		{
-			machineCode = MOVMEM;
-			machineCode += (whichReg( oper1[0] ) << 3);
-			machineCode += 0x06;
-			memory[address] = machineCode;
-			address++;
-			memory[address] = stripBrackets(commArr[2]);
 			address++;
 		}
 	}
@@ -199,6 +200,7 @@ int stripBrackets(string address)
 		}
 		temp += address[i];
 	}
+	cout << "Found an address in the second arg" << endl;
 	return stoi(temp);
 }	
 	
@@ -358,13 +360,14 @@ void runCode( )
 {
 	address = 0;
 	int topBits, midBits, botBits;
+	int targetAddress;
 	while(memory[address] != 5)  //until HALT
 	{
 		//cout << "contents of memory at " << address << " is " << memory[address] << endl;
 		topBits = (memory[address] & 224);
 		midBits = (memory[address] & 24) >> 3;
 		botBits = memory[address] & 7;
-		//cout << "topBit :" << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
+		cout << "topBit: " << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
 
 		if(topBits ==  MOVREG)
 		{
@@ -389,13 +392,34 @@ void runCode( )
 				}
 				address++;
 			}
+			else if(botBits <= 0x06) // it's one of the registers
+			{
+				targetAddress = memory[address+1];
+				cout << "Moving from memory address" << targetAddress;
+				switch(midBits)
+				{
+					case(0):
+						regis.AX = memory[targetAddress];
+						break;
+					case(1):
+						regis.BX = memory[targetAddress];
+						break;
+					case(2):
+						regis.CX = memory[targetAddress];
+						break;
+					case(3):
+						regis.DX = memory[targetAddress];
+						break;
+				}
+				address++;
+			}
 			address++;
 		}
 		if(topBits == MOVMEM)
 		{
-			int targetAddress;
 			if(botBits == 6) // the command is to move into an address
 			{
+				cout << "Moving into an address" << endl;
 				targetAddress = memory[address + 1];
 				switch(midBits)
 				{
@@ -410,27 +434,6 @@ void runCode( )
 						break;
 					case(3):
 						memory[targetAddress] = regis.DX;
-						break;
-				}
-				address++;
-			}
-			else if(botBits <= 0x03) // it's one of the registers
-			{
-				targetAddress = memory[address+1];
-				cout << "Moving from memory address" << targetAddress;
-				switch(botBits)
-				{
-					case(0):
-						regis.AX = memory[targetAddress];
-						break;
-					case(1):
-						regis.BX = memory[targetAddress];
-						break;
-					case(2):
-						regis.CX = memory[targetAddress];
-						break;
-					case(3):
-						regis.DX = memory[targetAddress];
 						break;
 				}
 				address++;
@@ -461,5 +464,6 @@ void runCode( )
 			address++;
 		}
 
+		cin.get();
 	}
 }
