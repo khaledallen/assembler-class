@@ -45,6 +45,7 @@ void printMemoryDump(); //prints memeory with integers commands
 void convertToMachineCode(ifstream &fin);
 void convertToNumber(string line, int &start, int &value);
 int whichReg(char regLetter);  //returns the number of the letter registar
+
 void fillMemory( );
 void runCode( );
 void changeToLowerCase(string &line);
@@ -392,10 +393,32 @@ void runCode( )
 				}
 				address++;
 			}
-			else if(botBits <= 0x06) // it's one of the registers
+			else if(botBits == 0x06) // it's one of the registers
 			{
 				targetAddress = memory[address+1];
 				cout << "Moving from memory address" << targetAddress;
+				string REGNAME = "AX";
+				cout << "I AM A TEST" << regis.REGNAME << endl;
+				switch(midBits)
+				{
+					case(0):
+						regis.AX = memory[targetAddress];
+						break;
+					case(1):
+						regis.BX = memory[targetAddress];
+						break;
+					case(2):
+						regis.CX = memory[targetAddress];
+						break;
+					case(3):
+						regis.DX = memory[targetAddress];
+						break;
+				}
+				address++;
+			}
+			else if(botBits <= 0x03) // it's one of the registers
+			{
+				cout << "Moving from REG to REG" << endl;
 				switch(midBits)
 				{
 					case(0):
