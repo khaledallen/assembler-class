@@ -1,3 +1,6 @@
+//Name: Khaled Allen
+//Project: Assembler Part 3
+//Filename: kAllenAssembler.cpp
 //need to create the functions run the array notation. 
 
 #include <iostream>
@@ -150,7 +153,7 @@ void convertToMachineCode( ifstream &fin )
 		}
 		else if(commArr[2][0] == '[') // The third arg is an address 
 		{
-			cout << "Found an address in the second arg" << endl;
+			//cout << "Found an address in the second arg" << endl;
 			machineCode = MOVREG;
 			machineCode += (whichReg( oper1[0] ) << 3);
 			machineCode += 0x06;
@@ -209,7 +212,7 @@ int stripBrackets(string address)
 		}
 		temp += address[i];
 	}
-	cout << "Found an address in the second arg" << endl;
+	//cout << "Found an address in the second arg" << endl;
 	return stoi(temp);
 }	
 	
@@ -376,7 +379,7 @@ void runCode( )
 		topBits = (memory[address] & 224);
 		midBits = (memory[address] & 24) >> 3;
 		botBits = memory[address] & 7;
-		cout << "topBit: " << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
+		//cout << "topBit: " << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
 
 		if(topBits ==  MOVREG)
 		{
@@ -423,7 +426,7 @@ void runCode( )
 			}
 			else if(botBits <= 0x03) // it's one of the registers
 			{
-				cout << "Moving from REG to REG" << endl;
+				//cout << "Moving from REG to REG" << endl;
 				switch(midBits)
 				{
 					case(0):
@@ -447,7 +450,7 @@ void runCode( )
 		{
 			if(botBits == 6) // the command is to move into an address
 			{
-				cout << "Moving into an address" << endl;
+				//cout << "Moving into an address" << endl;
 				targetAddress = memory[address + 1];
 				switch(midBits)
 				{
