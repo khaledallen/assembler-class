@@ -1,7 +1,19 @@
+//*********************************
 //Name: Khaled Allen
 //Project: Assembler Part 3
+//Due Date: 9/22/17
 //Filename: kAllenAssembler.cpp
-//need to create the functions run the array notation. 
+//INPUT FILENAME: kallen3.asm
+//OUTPUT FILENAME: -
+//DESCRIPTION:
+//This is an x86 assembler simulation written in C++
+//To use it, 
+//1. You can write an assembly code file (.asm) using basic x86 syntax.
+//2. Place the .asm file in the same directory as this assembler
+//3. Change the ASM_FILE_NAME (line 24) to a string that is your .asm filename
+//4. Compile and run this file.
+//5. You can change the .asm file without recompiling this assembler
+//**************************************************
 
 #include <iostream>
 #include <fstream>
@@ -10,60 +22,65 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen3.asm";
+char ASM_FILE_NAME[] = "kallen3.asm";			// input filename, .asm
 
-const int MAX = 150;  //size of simulators memory
-const int COL = 7;    //number of columns for output
+const int MAX = 150;  					//size of simulators memory
+const int COL = 7;    					//number of columns for output
 
-//REGISTERS
+//Machine Code for the REGISTERS
 const int AXREG = 0;
 const int BXREG = 1;
 const int CXREG = 2;
 const int DXREG = 3;
 
-         //commands
+//Machine Code Command Values
 const int HALT = 0x05;
-const int MOVREG = 0xc0; //192;
-const int ADD = 0xa0; 	 //160;
-const int MOVMEM = 0xe0; // 224;
+const int MOVREG = 0xc0;
+const int ADD = 0xa0;
+const int MOVMEM = 0xe0;
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
 typedef short int Memory;
 
-class Registers
-{
+class Registers						//Class defines object to hold
+{							//all registers, flags, instruction ptr
 public:
-	int AX;
+	int AX;						//Holds current value of registers
 	int BX;
 	int CX;
 	int DX;
-	int instrAddr;
-	int flag;
+	int instrAddr;					//Address of current instruction
+	int flag;					//Current value of flag
 }regis;
-Memory memory[MAX] = {0};
-int address;
 
-void printMemoryDump(); //prints memeory with integers commands
-void convertToMachineCode(ifstream &fin);
-void convertToNumber(string line, int &start, int &value);
-int whichReg(char regLetter);  //returns the number of the letter registar
+Memory memory[MAX] = {0};				//Array of size MAX, simulates memory of computer
+int address;						//The current address the assembler is looking at
 
-void fillMemory( );
-void runCode( );
-void changeToLowerCase(string &line);
-bool isNumber(string string);
-int stripBrackets(string address);
+/*********************
+ * Function Prototype List
+ * See functin definition for usage instructions
+ */
+void printMemoryDump();					//prints memeory with integers commands
+void convertToMachineCode(ifstream &fin);		//Converts .asm commands into machine code values and inserts into memory
+int convertToNumber(string line, int &start);		//Converts a string into a number
+int whichReg(char regLetter);  				//returns the number of the letter registar
+void fillMemory( );					//Populates the memory array
+void splitCommand( string &line, string &command );	//Parses .asm commands and extracts individual parts
+void runCode( );					//Interprets the machine code values and manipulates the memory
+void changeToLowerCase(string &line);			//Converts .asm commands into lowercase
+bool isNumber(string string);				//Checks if input string is a number
+int stripBrackets(string address);			//Strips brackets from .asm input and returns the number contained
 
 int main( )
 {
-	printMemoryDump( );
-	fillMemory( );
-	printMemoryDump( );
+	printMemoryDump( );				//Print initial memory state (should be all 0's)
+	fillMemory( );					//Assemble code and fill memory
+	printMemoryDump( );				
 	runCode( );
 	printMemoryDump( );
 	cout << endl;
-	system( "pause" );
+	system( "pause" );				//Needed for Windows Machines
 	return 0;
 }
 /************************************************************/
@@ -74,7 +91,6 @@ void fillMemory( )
 {
 	address = 0;
 	ifstream fin;
-	//recommend changeing so you can type in file name
 	fin.open( ASM_FILE_NAME );
 	if (fin.fail( ))
 	{
@@ -87,39 +103,41 @@ void fillMemory( )
 	{
 		convertToMachineCode( fin );
 	}
-	//cout<<"memory filled";
 	
 }
 
 /**************************************************/
 /* splitCommand
- * parses the line of assembler code
- * line - is the line to be parsed, it is returned 1 command shorter
- * command - is the command that is returned, clipped off the end
+ * Description:
+ * Parses the line of assembler code
+ * Parameters:
+ * line - MODIFIED, is the line to be parsed, it is returned 1 command shorter
+ * command - MODIFIED, is the command that is returned, clipped off the end
  */
 void splitCommand( string &line, string &command )
 {
-	int space = line.find( ' ' );
+	int space = line.find( ' ' );				//the position of the first space in the command
 	command = line.substr( 0, space );
 	line = line.substr(space + 1);
 }
 /***************************************************/
 /* convertToMachineCode
+ * Description:
  * processes a single line of asm code and converts it to machine values
- * fin - is the asm file to be processed
+ * Parameters:
+ * fin - MODIFIED, is the asm file to be processed
  */
 void convertToMachineCode( ifstream &fin )
 {
-	string line;  //full command
-	string commArr[3];
-	string command; //the asm commmand
-	string oper1, oper2;  //the two operands could be empty
-	int machineCode = 0;
+	string line;  						//full line from .asm file
+	string commArr[3];					//array to hold command and assign indeces
+	string command; 					//the asm commmand
+	string oper1, oper2;  					//the two operands could be empty
+	int machineCode = 0;					//start building the machine code
 	getline( fin, line, '\n' );
 	changeToLowerCase( line );
 
 	int i = 0;
-
 	while( line.length() > 0 || i < 2)
 	{
 		splitCommand( line, command );
@@ -128,18 +146,21 @@ void convertToMachineCode( ifstream &fin )
 		i++;
 	}
 
-	command = commArr[0];
-	if(i > 0)
+	command = commArr[0];					//set the command to the first argument of the array
+	if(i > 0)						//if i was greater than 0, there were two parts to the asm command
+	{
 		oper1 = commArr[1];
-	if(i > 1)
+	}
+	if(i > 1)						//if i was greater than 1, there were three parts to the asm command
+	{
 		oper2 = commArr[2];
-	
-	if (command[0] == 'h')  //halt
+	}
+	if (command[0] == 'h')  				//halt
 	{
 		memory[address] = HALT;
 		address++;
 	}
-	if (command[0] == 'm')  //move
+	if (command[0] == 'm')  				//move
 	{
 		if(isNumber(commArr[2]))
 		{
@@ -151,9 +172,8 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = stoi(commArr[2]);
 			address++;
 		}
-		else if(commArr[2][0] == '[') // The third arg is an address 
+		else if(commArr[2][0] == '[') 			// The third arg is an address 
 		{
-			//cout << "Found an address in the second arg" << endl;
 			machineCode = MOVREG;
 			machineCode += (whichReg( oper1[0] ) << 3);
 			machineCode += 0x06;
@@ -162,7 +182,7 @@ void convertToMachineCode( ifstream &fin )
 			memory[address] = stripBrackets(commArr[2]);
 			address++;
 		}
-		else if(commArr[1][0] == '[') // The second arg is an address 
+		else if(commArr[1][0] == '[') 			// The second arg is an address 
 		{
 			machineCode = MOVMEM;
 			machineCode += (whichReg( oper2[0] ) << 3);
@@ -173,7 +193,7 @@ void convertToMachineCode( ifstream &fin )
 			address++;
 		}
 	}
-	if (command[0] == 'a') //add
+	if (command[0] == 'a') 					//add
 	{
 		if(isNumber(commArr[2]))
 		{
@@ -194,16 +214,23 @@ void convertToMachineCode( ifstream &fin )
 			address++;
 		}
 	}
-					
 	cout << endl;
-	//else if (command)
 
 
 }
 
+/*********************************
+ * stripBrackets
+ * Description:
+ * Removes the brackets from memory addresses
+ * Parameters:
+ * address - the string to be stipped of brackets
+ * Returns:
+ * A number extracted from the brackets
+ */
 int stripBrackets(string address)
 {
-	string temp;
+	string temp;						//a string to hold the chars between the brackets
 	int i = 0;
 
 	for(i = 0; i < address.length(); i++) {
@@ -212,15 +239,19 @@ int stripBrackets(string address)
 		}
 		temp += address[i];
 	}
-	//cout << "Found an address in the second arg" << endl;
 	return stoi(temp);
 }	
 	
 
-/************************************************************/
-/*whichReg																	*/
-/*		changes the letter of the registar to a number.			*/
-
+/************************************************************
+ * whichReg
+ * Description:
+ * Converts a string in the .asm file into the machine code for the register
+ * Parameters:
+ * regLetter - the first letter of the .asm string for the register
+ * Returns:
+ * An integer representing the appropriate register's machine code
+ */
 int whichReg(char regLetter)
 {
 	if (regLetter == 'a')
@@ -246,15 +277,19 @@ int whichReg(char regLetter)
 /*ConvertToNumber															*/
 /*  takes in a line and converts digits to a integer			*/
 /*  line - is the string of assembly code to convert			*/
-/*  start - is the location where the line is being coverted, 
+/*  start - MODIFIED, is the location where the line is being coverted, 
 		it starts at the beginning of number and it passed 
 		back at the next location */
-/*  value - is the integer value of the digits in the code	*/
-void convertToNumber(string line, int &start, int &value)
+/*  value - MODIFIED, is the integer value of the digits in the code
+ *  Returns:
+ *  value - integer converted from the string
+ */
+
+int convertToNumber(string line, int &start)
 {
-	char number[16];
-	bool negative = false;
-//	cout<< "in convertToNumber before function 1  start is "<<start<<endl;
+	char number[16];						//character array to hold number
+	bool negative = false;						//flag to check if negative
+	int value;							//var to hold the numerical version of string
 	int i = 0;
 	if (line[start] == '-')
 	{
@@ -264,10 +299,8 @@ void convertToNumber(string line, int &start, int &value)
 	while (i<16 && line.size() > start&& isdigit(line[start]))
 	{
 		number[i] = line[start];
-					//	cout<<line[start];
 		i++;
 		start++;
-				//		cout<<i<<start;
 	}
 	number[i] = '\0';
 	value = atoi(number);
@@ -275,12 +308,13 @@ void convertToNumber(string line, int &start, int &value)
 	{
 		value = -value;
 	}
-//	cout<< "in convertToNumber after function 1  start is "<<start<<endl;
+	return value;
 }
 
-/************************************************************/
-/*printMemoryCommands													*/
-/*prints memory with letter commands								*/
+/************************************************************
+ * printMemoryCommands
+ * Description: prints memory with letter commands
+ */
 void printMemoryCommands()
 {
 	int i= 0;
@@ -304,16 +338,18 @@ void printMemoryCommands()
 }
 
 
-/************************************************************/
-/*printMemoryDump															*/
-/*prints memory by number												*/
-/*MAX is the amount of elements in the memory array (Vicki used 100) */
-/*COL is the number of columns that are to be displayed (Vicki used 7; was originally called COLUMNS) */
+/************************************************************
+ * printMemoryDump
+
+ * prints memory by number
+ * MAX is the amount of elements in the memory array (Vicki used 100) - Defined globally
+ * COL is the number of columns that are to be displayed (Vicki used 7; was originally called COLUMNS) - Defined globally
+ */
 void printMemoryDump()
 {
-	int numRows=MAX/COL+1;   //number of rows that will print
-	int carryOver=MAX%COL;   //number of columns on the bottom row
-	int location;   //the current location being called
+	int numRows=MAX/COL+1;   					//number of rows that will print
+	int carryOver=MAX%COL;   					//number of columns on the bottom row
+	int location;   						//the current location being called
 	for(int row=0;row<numRows;row++)
 	{
 		location=row;
@@ -326,7 +362,6 @@ void printMemoryDump()
 			}
 		}
 		cout<<endl;
-		//cout<<setw(3);
 	}
 
 	cout<<endl;
@@ -342,6 +377,13 @@ void printMemoryDump()
 }
 
 
+/*********************************
+ * changeToLowerCase
+ * Description:
+ * Converts a string to lowercase
+ * Parameters:
+ * &line - MODIFIED, the string to be converted to lowercase
+ */
 void changeToLowerCase(string &line)
 {
 	
@@ -351,10 +393,18 @@ void changeToLowerCase(string &line)
 		line[index] = tolower(line[index]);
 		index++;
 	}
-//	cout<<"the line in change"<<line;
 
 }
 
+/*********************************
+ * isNumber
+ * Description:
+ * Checks if a string is a number and returns true if it is
+ * Parameters:
+ * string - the string to be checked
+ * Returns:
+ * bool - true/false
+ */
 bool isNumber(string string)
 {
 	int i = 0, num;
@@ -368,25 +418,27 @@ bool isNumber(string string)
 	return true;
 }
 
+/*********************************
+ * runCode
+ * Description:
+ * Interprets the values in memory[] as machine code values
+ * 	and alters memory[] accordingly
+ */
 void runCode( )
 {
-	address = 0;
-	int topBits, midBits, botBits;
-	int targetAddress;
-	while(memory[address] != 5)  //until HALT
+	address = 0;					//start address counter back at 0
+	int topBits, midBits, botBits;			//variables to hold the pieces of the machine code instructions
+	int targetAddress;				//variable to hold addresses
+	while(memory[address] != HALT) 			//run until HALT command encountered
 	{
-		//cout << "contents of memory at " << address << " is " << memory[address] << endl;
-		topBits = (memory[address] & 224);
-		midBits = (memory[address] & 24) >> 3;
+		topBits = (memory[address] & 224);	//Extract the bits from the machine code
+		midBits = (memory[address] & 24) >> 3;	//TODO Make this a standalone function
 		botBits = memory[address] & 7;
-		//cout << "topBit: " << topBits << endl << "midBits: " << midBits << endl << "botBits: " << botBits << endl;
 
 		if(topBits ==  MOVREG)
 		{
-		//	cout << "The command is to move into a register" << endl;
-			if(botBits == 7)
+			if(botBits == 0x07)
 			{
-		//		cout << "The command is to move a constant " << endl;
 				switch(midBits)
 				{
 					case(0):
@@ -404,11 +456,12 @@ void runCode( )
 				}
 				address++;
 			}
-			else if(botBits == 0x06) // it's one of the registers
+			else if(botBits == 0x06) 	//the command is to move from memory
 			{
-				targetAddress = memory[address+1];
+				targetAddress = memory[address+1];  //the target address is always in the next memory location
 				switch(midBits)
 				{
+					//TODO: Turn all these into a function
 					case(0):
 						regis.AX = memory[targetAddress];
 						break;
@@ -424,9 +477,8 @@ void runCode( )
 				}
 				address++;
 			}
-			else if(botBits <= 0x03) // it's one of the registers
+			else if(botBits <= 0x03) 			//The command is to move from a register
 			{
-				//cout << "Moving from REG to REG" << endl;
 				switch(midBits)
 				{
 					case(0):
@@ -448,9 +500,8 @@ void runCode( )
 		}
 		if(topBits == MOVMEM)
 		{
-			if(botBits == 6) // the command is to move into an address
+			if(botBits == 6) 				//The command is to move into an address
 			{
-				//cout << "Moving into an address" << endl;
 				targetAddress = memory[address + 1];
 				switch(midBits)
 				{
@@ -475,6 +526,7 @@ void runCode( )
 		{
 			switch(midBits)
 			{
+				//TODO: Turn all these into functions
 				case(0):
 					if(botBits == 7)
 					{
@@ -482,11 +534,17 @@ void runCode( )
 						address++;
 					}
 					if(botBits == 1)
+					{
 						regis.AX += regis.BX;
+					}
 					if(botBits == 2)
+					{
 						regis.AX += regis.CX;
+					}
 					if(botBits == 3)
+					{
 						regis.AX += regis.DX;
+					}
 					break;
 				case(1):
 					if(botBits == 7)
@@ -495,11 +553,17 @@ void runCode( )
 						address++;
 					}
 					if(botBits == 0)
+					{
 						regis.BX += regis.AX;
+					}
 					if(botBits == 2)
+					{
 						regis.BX += regis.CX;
+					}
 					if(botBits == 3)
+					{
 						regis.BX += regis.DX;
+					}
 					break;
 				case(2):
 					if(botBits == 7)
@@ -508,11 +572,17 @@ void runCode( )
 						address++;
 					}
 					if(botBits == 0)
+					{
 						regis.CX += regis.AX;
+					}
 					if(botBits == 1)
+					{
 						regis.CX += regis.BX;
+					}
 					if(botBits == 3)
+					{
 						regis.CX += regis.DX;
+					}
 					break;
 				case(3):
 					if(botBits == 7)
@@ -521,14 +591,31 @@ void runCode( )
 						address++;
 					}
 					if(botBits == 0)
+					{
 						regis.DX += regis.AX;
+					}
 					if(botBits == 1)
+					{
 						regis.DX += regis.BX;
+					}
 					if(botBits == 2)
+					{
 						regis.DX += regis.CX;
+					}
 					break;
 			}
 		address++;
 		}
 	}
 }
+
+/*****************************
+ * Problems:
+ * no problems
+ */
+
+/****************************
+ * TODO s
+ * Convert all the register switch statements into a function or class method
+ * Convert the bit extraction into a standalone function
+ */
