@@ -137,7 +137,7 @@ void convertToMachineCode( ifstream &fin )
 	getline( fin, line, '\n' );
 	changeToLowerCase( line );
 
-	int i = 0;
+	int i = 0;						//i is the number of arguments found
 	while( line.length() > 0 || i < 2)
 	{
 		splitCommand( line, command );
@@ -147,6 +147,13 @@ void convertToMachineCode( ifstream &fin )
 	}
 
 	command = commArr[0];					//set the command to the first argument of the array
+	if(i == 0)						//if i is 0, it is a no operand command (or a value)
+	{
+		if(isNumber(commArr[0])) {			//if the first command is a number, it's just a value to put in memory
+			memory[address] = stoi(commArr[0]);
+		}
+		address++;
+	}
 	if(i > 0)						//if i was greater than 0, there were two parts to the asm command
 	{
 		oper1 = commArr[1];
