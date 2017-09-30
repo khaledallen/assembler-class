@@ -101,6 +101,7 @@ void fillMemory( )
 
 	for (int i = 0; i< MAX && !fin.fail( ); i++)
 	{
+		cout << "Address: " << address << endl;
 		convertToMachineCode( fin );
 	}
 	
@@ -117,8 +118,14 @@ void fillMemory( )
 void splitCommand( string &line, string &command )
 {
 	int space = line.find( ' ' );				//the position of the first space in the command
-	command = line.substr( 0, space );
-	line = line.substr(space + 1);
+	if(space != -1)
+	{
+		command = line.substr( 0, space );
+		line = line.substr(space + 1);
+	} else {
+		command = line.substr ( 0 );
+		line = "";
+	}
 }
 /***************************************************/
 /* convertToMachineCode
@@ -138,27 +145,32 @@ void convertToMachineCode( ifstream &fin )
 	changeToLowerCase( line );
 
 	int i = 0;						//i is the number of arguments found
-	while( line.length() > 0 || i < 2)
+	while( line.length() > 0 && i < 3)
 	{
 		splitCommand( line, command );
 		commArr[i] = command; 
-		if (i==2){ line = "";}
 		i++;
-	}
+	} 
 
 	command = commArr[0];					//set the command to the first argument of the array
-	if(i == 0)						//if i is 0, it is a no operand command (or a value)
+	if(i == 0)						//if i is 0, the command was empty. Step address
 	{
-		if(isNumber(commArr[0])) {			//if the first command is a number, it's just a value to put in memory
-			memory[address] = stoi(commArr[0]);
-		}
 		address++;
 	}
-	if(i > 0)						//if i was greater than 0, there were two parts to the asm command
+	if(i == 1)						//if i is 1, it is a no operand command (or a value)
+	{
+		cout << commArr[0] << endl;
+		if(isNumber(commArr[0])) {			//if the first command is a number, it's just a value to put in memory
+			memory[address] = stoi(commArr[0]);
+			address++;
+		}
+	}
+	
+	if(i > 1)						//if i was greater than 1, there were two parts to the asm command
 	{
 		oper1 = commArr[1];
 	}
-	if(i > 1)						//if i was greater than 1, there were three parts to the asm command
+	if(i > 2)						//if i was greater than 2, there were three parts to the asm command
 	{
 		oper2 = commArr[2];
 	}
@@ -221,6 +233,7 @@ void convertToMachineCode( ifstream &fin )
 			address++;
 		}
 	}
+	cout << "Assembly complete." << endl;
 	cout << endl;
 
 
@@ -418,7 +431,6 @@ bool isNumber(string string)
 	for (i = 0; i < string.length(); i++ )
 	{
 		num = string[i];
-		cout << string[i] << num << endl;
 		if((num < 48 || num > 57) && num != 45)
 			return false;
 	}

@@ -14,3 +14,7 @@ ADD CX BX
 MOV [59] CX
 HALT
 
+99
+99
+99
+99
