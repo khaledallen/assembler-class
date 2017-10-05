@@ -22,7 +22,7 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen3.asm";			// input filename, .asm
+char ASM_FILE_NAME[] = "kallen4.asm";			// input filename, .asm
 
 const int MAX = 150;  					//size of simulators memory
 const int COL = 7;    					//number of columns for output
@@ -33,11 +33,20 @@ const int BXREG = 1;
 const int CXREG = 2;
 const int DXREG = 3;
 
+//Machine Code for OPERANDS
+const int CONSTANT = 0x07;				// 00000111
+const int ADDRESS = 0x06;				// 00000110
+
 //Machine Code Command Values
-const int HALT = 0x05;
-const int MOVREG = 0xc0;
-const int ADD = 0xa0;
-const int MOVMEM = 0xe0;
+const int HALT = 0x05;					// 00000101
+const int MOVREG = 0xc0;				// 11000000
+const int ADD = 0xa0;					// 10100000
+const int SUB = 0x80;					// 10000000
+const int OR = 0x20;					// 00100000
+const int AND = 0x40;					// 01000000
+const int MOVMEM = 0xe0;				// 11100000
+const int COMPARE = 0x60;				// 01100000
+const int PUT = 0x07;					// 00000111
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -52,6 +61,9 @@ public:
 	int DX;
 	int instrAddr;					//Address of current instruction
 	int flag;					//Current value of flag
+
+	int getReg(int i);				//Takes the machine code value of a register and returns its value
+	void setReg(int input, int reg);		//Sets the given register index to the providede value
 }regis;
 
 Memory memory[MAX] = {0};				//Array of size MAX, simulates memory of computer
@@ -71,18 +83,73 @@ void runCode( );					//Interprets the machine code values and manipulates the me
 void changeToLowerCase(string &line);			//Converts .asm commands into lowercase
 bool isNumber(string string);				//Checks if input string is a number
 int stripBrackets(string address);			//Strips brackets from .asm input and returns the number contained
+bool isAddress(string string);				//Checks if input string is an address
+void buildBotBits(string commArr[], int &machineCode, int &address); //Builds the bottom bits of the 2 operand instructions
+void setFlag(int reg, int botBits, int &address);	//Hangles the logic for the compare machine code
+int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, AND, ADD, and SUB machine code
 
 int main( )
 {
+	cout << "Initial Memory State" << endl;
 	printMemoryDump( );				//Print initial memory state (should be all 0's)
 	fillMemory( );					//Assemble code and fill memory
 	printMemoryDump( );				
+	cout << "Assembly Complete" << endl;
 	runCode( );
 	printMemoryDump( );
 	cout << endl;
 	system( "pause" );				//Needed for Windows Machines
 	return 0;
 }
+/****************************************
+ * int Registers::getReg(int i)
+ * Description:
+ * Takes the machine code value of a register
+ * Returns the value of that register
+ */
+int Registers::getReg(int i)
+{
+	if(i > 3 || i < 0)
+	{
+		cout << "Error. No register with index " << i << ". Aborting." << endl;
+	}
+	switch(i)
+	{
+		case(0): return AX;
+		case(1): return BX;
+		case(2): return CX;
+		case(3): return DX;
+	}
+	return 0;
+}
+/******************************
+ * void Registers::setReg(int input, int reg)
+ * Description:
+ * Sets the specified register to the provided value
+ * Parameters:
+ * int input - the value to be set into the register
+ * int reg - the index (0-3) of the register to be set
+ */
+void Registers::setReg(int input, int reg)
+{
+	if(reg > 3 || reg < 0)
+	{
+		cout << "Error. No register with inder " << reg << ". Aborting." << endl;
+	}
+	switch(reg)
+	{
+		case(0): AX = input;
+			 break;
+		case(1): BX = input;
+			 break;
+		case(2): CX = input;
+			 break;
+		case(3): DX = input;
+			 break;
+	}
+}
+
+			
 /************************************************************/
 /*fillMemory						    */
 /*changes the code to machine code and places the
@@ -101,7 +168,6 @@ void fillMemory( )
 
 	for (int i = 0; i< MAX && !fin.fail( ); i++)
 	{
-		cout << "Address: " << address << endl;
 		convertToMachineCode( fin );
 	}
 	
@@ -159,7 +225,6 @@ void convertToMachineCode( ifstream &fin )
 	}
 	if(i == 1)						//if i is 1, it is a no operand command (or a value)
 	{
-		cout << commArr[0] << endl;
 		if(isNumber(commArr[0])) {			//if the first command is a number, it's just a value to put in memory
 			memory[address] = stoi(commArr[0]);
 			address++;
@@ -179,66 +244,78 @@ void convertToMachineCode( ifstream &fin )
 		memory[address] = HALT;
 		address++;
 	}
-	if (command[0] == 'm')  				//move
+	if (command[0] == 'm' && !isAddress(commArr[1]))  				//move
 	{
-		if(isNumber(commArr[2]))
-		{
-			machineCode = MOVREG;
-			machineCode += (whichReg( oper1[0] ) << 3);
-			machineCode += 7; 
-			memory[address] = machineCode;
-			address++;
-			memory[address] = stoi(commArr[2]);
-			address++;
-		}
-		else if(commArr[2][0] == '[') 			// The third arg is an address 
-		{
-			machineCode = MOVREG;
-			machineCode += (whichReg( oper1[0] ) << 3);
-			machineCode += 0x06;
-			memory[address] = machineCode;
-			address++;
-			memory[address] = stripBrackets(commArr[2]);
-			address++;
-		}
-		else if(commArr[1][0] == '[') 			// The second arg is an address 
-		{
-			machineCode = MOVMEM;
-			machineCode += (whichReg( oper2[0] ) << 3);
-			machineCode += 6;
-			memory[address] = machineCode;
-			address++;
-			memory[address] = stripBrackets(commArr[1]);
-			address++;
-		}
+		machineCode = MOVREG;
+		machineCode += (whichReg( oper1[0] ) << 3);
+		buildBotBits(commArr, machineCode, address);
+		address++;
 	}
-	if (command[0] == 'a') 					//add
+	if (command[0] == 'm' && isAddress(commArr[1]))	 			// The second arg is an address 
 	{
-		if(isNumber(commArr[2]))
+		machineCode = MOVMEM;
+		machineCode += (whichReg( oper2[0] ) << 3);
+		machineCode += ADDRESS;
+		memory[address] = machineCode;
+		address++;
+		memory[address] = stripBrackets(commArr[1]);
+		address++;
+	}
+	if (command == "add")	 					//add
+	{
+		machineCode = ADD;
+		machineCode += (whichReg ( oper1[0] )) << 3;
+		buildBotBits(commArr, machineCode, address);
+		address++;
+	}
+	if (command[0] == 'c')
+	{
+		machineCode = COMPARE;
+		machineCode += (whichReg ( oper1[0] )) << 3;
+		buildBotBits(commArr, machineCode, address);
+		address++;
+	}
+	if (command == "put")
+	{
+		machineCode = PUT;
+		memory[address] = machineCode;
+		address++;
+	}
+}
+/****************************************
+ * buildBotBits
+ * Description: Adds the bottom bits of the 2 operand instructions
+ * Paramters:
+ * commArr[] - the command array built in convertToMachineCode
+ * int machineCode - the value being built 
+ * int addrss - the address pointer
+ *
+ */
+void buildBotBits(string commArr[], int &machineCode, int &address)
+{
+	string oper1 = commArr[1];
+	string oper2 = commArr[2];
+
+		if(isNumber(oper2))
 		{
-			machineCode = ADD;
-			machineCode += (whichReg ( oper1[0] )) << 3;
-			machineCode += 7;
+			machineCode += CONSTANT;
 			memory[address] = machineCode;
 			address++;
-			memory[address] = stoi(commArr[2]);
+			memory[address] = stoi(oper2);
+		}
+		else if(isAddress(oper2))
+		{
+			machineCode += ADDRESS;
+			memory[address] = machineCode;
 			address++;
+			memory[address] = stripBrackets(oper2);
 		}
 		else
 		{
-			machineCode = ADD;
-			machineCode += (whichReg ( oper1[0] )) << 3;
-			machineCode += (whichReg ( oper2[0] ));
+			machineCode += whichReg(oper2[0]);
 			memory[address] = machineCode;
-			address++;
 		}
-	}
-	cout << "Assembly complete." << endl;
-	cout << endl;
-
-
 }
-
 /*********************************
  * stripBrackets
  * Description:
@@ -417,6 +494,20 @@ void changeToLowerCase(string &line)
 }
 
 /*********************************
+ * isAddress
+ * Description:
+ * Checks if a string is an address and returns true if it is
+ * Paramters:
+ * string - the string to be checked
+ * Returns:
+ * bool - true/false
+ */
+bool isAddress(string string)
+{
+	return string[0] == '[';
+}
+
+/*********************************
  * isNumber
  * Description:
  * Checks if a string is a number and returns true if it is
@@ -543,91 +634,201 @@ void runCode( )
 		}
 		if(topBits == ADD)
 		{
-			switch(midBits)
+			int input;
+			if(botBits == CONSTANT)
 			{
-				//TODO: Turn all these into functions
-				case(0):
-					if(botBits == 7)
-					{
-						regis.AX += memory[address+1];
-						address++;
-					}
-					if(botBits == 1)
-					{
-						regis.AX += regis.BX;
-					}
-					if(botBits == 2)
-					{
-						regis.AX += regis.CX;
-					}
-					if(botBits == 3)
-					{
-						regis.AX += regis.DX;
-					}
-					break;
-				case(1):
-					if(botBits == 7)
-					{
-						regis.BX += memory[address+1];
-						address++;
-					}
-					if(botBits == 0)
-					{
-						regis.BX += regis.AX;
-					}
-					if(botBits == 2)
-					{
-						regis.BX += regis.CX;
-					}
-					if(botBits == 3)
-					{
-						regis.BX += regis.DX;
-					}
-					break;
-				case(2):
-					if(botBits == 7)
-					{
-						regis.CX += memory[address+1];
-						address++;
-					}
-					if(botBits == 0)
-					{
-						regis.CX += regis.AX;
-					}
-					if(botBits == 1)
-					{
-						regis.CX += regis.BX;
-					}
-					if(botBits == 3)
-					{
-						regis.CX += regis.DX;
-					}
-					break;
-				case(3):
-					if(botBits == 7)
-					{
-						regis.DX += memory[address+1];
-						address++;
-					}
-					if(botBits == 0)
-					{
-						regis.DX += regis.AX;
-					}
-					if(botBits == 1)
-					{
-						regis.DX += regis.BX;
-					}
-					if(botBits == 2)
-					{
-						regis.DX += regis.CX;
-					}
-					break;
+				input = doMath(regis.getReg(midBits), memory[address+1], ADD);
+				address++;
 			}
+			else if(botBits == ADDRESS)
+			{
+				int targetAddress = memory[address+1];
+				input = doMath(regis.getReg(midBits), memory[targetAddress], ADD);
+				address++;
+			}
+			else
+			{
+				input = doMath(regis.getReg(midBits), regis.getReg(botBits), ADD);
+			}
+			regis.setReg(input, midBits);
 		address++;
+		}
+		if(topBits == SUB)
+		{
+			int input;
+			if(botBits == CONSTANT)
+			{
+				input = doMath(regis.getReg(midBits), memory[address+1], SUB);
+				address++;
+			}
+			else if(botBits == ADDRESS)
+			{
+				int targetAddress = memory[address+1];
+				input = doMath(regis.getReg(midBits), memory[targetAddress], SUB);
+				address++;
+			}
+			else
+			{
+				input = doMath(regis.getReg(midBits), regis.getReg(botBits), SUB);
+			}
+			regis.setReg(input, midBits);
+		address++;
+		}
+		if(topBits == OR)
+		{
+			int input;
+			if(botBits == CONSTANT)
+			{
+				input = doMath(regis.getReg(midBits), memory[address+1], OR);
+				address++;
+			}
+			else if(botBits == ADDRESS)
+			{
+				int targetAddress = memory[address+1];
+				input = doMath(regis.getReg(midBits), memory[targetAddress], OR);
+				address++;
+			}
+			else
+			{
+				input = doMath(regis.getReg(midBits), regis.getReg(botBits), OR);
+			}
+			regis.setReg(input, midBits);
+		address++;
+		}
+		if(topBits == AND)
+		{
+			int input;
+			if(botBits == CONSTANT)
+			{
+				input = doMath(regis.getReg(midBits), memory[address+1], AND);
+				address++;
+			}
+			else if(botBits == ADDRESS)
+			{
+				int targetAddress = memory[address+1];
+				input = doMath(regis.getReg(midBits), memory[targetAddress], AND);
+				address++;
+			}
+			else
+			{
+				input = doMath(regis.getReg(midBits), regis.getReg(botBits), AND);
+			}
+			regis.setReg(input, midBits);
+		address++;
+		}
+		if(topBits == COMPARE)
+		{
+			setFlag(regis.getReg(midBits), botBits, address);
+		address++;
+		}
+		if(topBits == 0x00)
+		{
+			if(botBits == PUT)
+			{
+			cout << "CONSOLE OUTPUT: " << regis.AX << endl;
+			}
+			address++;
+		}
+	}
+}
+				
+/******************************
+ * Run Code Utility Function
+ */
+
+/******************************
+ * void setFlag
+ * Description:
+ * Hangles the logic for the compare function machine code
+ * Parameters:
+ * int reg - the register being compared, the first argument
+ * int botBits - the bottom bits of the machine code command
+ * int &address - the address pointer
+ */
+
+void setFlag(int reg, int botBits, int &address)
+{
+	if(botBits == CONSTANT)
+	{
+		if(reg > memory[address+1])
+		{
+			regis.flag = 1;
+		}
+		else if(reg < memory[address+1])
+		{
+			regis.flag = -1;
+		}
+		else
+		{
+			regis.flag = 0;
+		}
+	}
+	else if(botBits == ADDRESS)
+	{
+		int targetAddress = memory[address+1];
+		if(reg > memory[targetAddress])
+		{
+			regis.flag = 1;
+		}
+		else if(reg < memory[targetAddress])
+		{
+			regis.flag = -1;
+		}
+		else
+		{
+			regis.flag = 0;
+		}
+	}
+	else
+	{
+		if(reg > regis.getReg(botBits) )
+		{
+			regis.flag = 1;
+		}
+		else if(reg < regis.getReg(botBits) )
+		{
+			regis.flag = -1;
+		}
+		else
+		{
+			regis.flag = 0;
 		}
 	}
 }
 
+/******************************
+ * doMath
+ * Description:
+ * Handles the logic for the OR, AND, SUB, and ADD code commands
+ * Parameters:
+ * int arg1 - the first argument to receive the result of the operation
+ * int arg2 - the second argument
+ * int operation - the operation to perform
+ */
+int doMath( int arg1, int arg2, int operation)
+{
+	int result;
+	if(operation == OR)
+	{
+		result = arg1 | arg2;
+	}
+	if(operation == AND)
+	{
+		result = arg1 & arg2;
+	}
+	if(operation == ADD)
+	{
+		result = arg1 + arg2;
+	}
+	if(operation == SUB)
+	{
+		result = arg1 - arg2;
+	}
+	return result;
+}
+	
+
+					
 /*****************************
  * Problems:
  * no problems
