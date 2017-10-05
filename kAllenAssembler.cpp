@@ -47,6 +47,8 @@ const int AND = 0x40;					// 01000000
 const int MOVMEM = 0xe0;				// 11100000
 const int COMPARE = 0x60;				// 01100000
 const int PUT = 0x07;					// 00000111
+const int SPECIAL = 0x00;				// 00000000
+const int ZERO_OPS = 0x00;				// 00000000
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -714,20 +716,23 @@ void runCode( )
 				input = doMath(regis.getReg(midBits), regis.getReg(botBits), AND);
 			}
 			regis.setReg(input, midBits);
-		address++;
+			address++;
 		}
 		if(topBits == COMPARE)
 		{
 			setFlag(regis.getReg(midBits), botBits, address);
-		address++;
-		}
-		if(topBits == 0x00)
-		{
-			if(botBits == PUT)
-			{
-			cout << "CONSOLE OUTPUT: " << regis.AX << endl;
-			}
 			address++;
+		}
+		if(topBits == SPECIAL)
+		{
+			if(midBits == ZERO_OPS)
+			{
+				if(botBits == PUT)
+				{
+					cout << "CONSOLE OUTPUT: " << regis.AX << endl;
+				}
+				address++;
+			}
 		}
 	}
 }
