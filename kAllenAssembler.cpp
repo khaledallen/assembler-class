@@ -825,6 +825,7 @@ void setFlag(int reg, int botBits, int &address)
 		{
 			regis.flag = 0;
 		}
+		address++;
 	}
 	else if(botBits == ADDRESS)
 	{
@@ -841,6 +842,7 @@ void setFlag(int reg, int botBits, int &address)
 		{
 			regis.flag = 0;
 		}
+		address++;
 	}
 	else
 	{
@@ -952,7 +954,7 @@ void doJump( int botBits, int &address)
  */
 int doMath( int arg1, int arg2, int operation)
 {
-	int result;
+	int result;				// the final result to be returned
 	if(operation == OR)
 	{
 		result = arg1 | arg2;
@@ -981,6 +983,7 @@ int doMath( int arg1, int arg2, int operation)
 
 /****************************
  * TODO s
- * Convert all the register switch statements into a function or class method
- * Convert the bit extraction into a standalone function
+ * - Add the ability to put constants into memory addresses: MOV [xxxx] CONST
+ * - Convert the bit extraction into a standalone function
+ * + Convert all the register switch statements into a function or class method
  */
