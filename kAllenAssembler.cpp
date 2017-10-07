@@ -22,7 +22,7 @@
 #include <ctype.h>
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen4.asm";			// input filename, .asm
+char ASM_FILE_NAME[] = "kallen5.asm";			// input filename, .asm
 
 const int MAX = 150;  					//size of simulators memory
 const int COL = 7;    					//number of columns for output
@@ -37,7 +37,12 @@ const int DXREG = 3;
 const int CONSTANT = 0x07;				// 00000111
 const int ADDRESS = 0x06;				// 00000110
 
-//Machine Code Command Values
+/******************************
+ * Machine Codes for Various Commands
+ * Organized by Position in the command Bit
+ */
+
+/* Top Bits */
 const int HALT = 0x05;					// 00000101
 const int MOVREG = 0xc0;				// 11000000
 const int ADD = 0xa0;					// 10100000
@@ -46,9 +51,22 @@ const int OR = 0x20;					// 00100000
 const int AND = 0x40;					// 01000000
 const int MOVMEM = 0xe0;				// 11100000
 const int COMPARE = 0x60;				// 01100000
-const int PUT = 0x07;					// 00000111
 const int SPECIAL = 0x00;				// 00000000
+
+/* Mid Bits */
 const int ZERO_OPS = 0x00;				// 00000000
+const int JUMP_INST = 0x08;				// 00001000
+
+/* Bottom Bits */
+const int PUT = 0x07;					// 00000111
+const int GET = 0x06;					// 00000110
+const int JUMP_EQUAL = 0x00;				// 00000000
+const int JUMP_NOT_EQUAL = 0x01;			// 00000001
+const int JUMP_BELOW = 0x02;				// 00000010
+const int JUMP_BELOW_EQ = 0x03;				// 00000011
+const int JUMP_ABOVE = 0x04;				// 00000100
+const int JUMP_ABOVE_EQ = 0x05;				// 00000101
+const int JUMP = 0x06;					// 00000110
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -89,15 +107,19 @@ bool isAddress(string string);				//Checks if input string is an address
 void buildBotBits(string commArr[], int &machineCode, int &address); //Builds the bottom bits of the 2 operand instructions
 void setFlag(int reg, int botBits, int &address);	//Hangles the logic for the compare machine code
 int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, AND, ADD, and SUB machine code
+void jumpBuilder(string commArr[], int &machineCode, int &address);	//Builds jump commands for the assembly of the code
+void doJump( int botBits, int &address);		//Handles the logic for running Jump Code
 
 int main( )
 {
 	cout << "Initial Memory State" << endl;
 	printMemoryDump( );				//Print initial memory state (should be all 0's)
 	fillMemory( );					//Assemble code and fill memory
+	cout << "^^^^^^^^^^^^^^^^^^^^^^^^^ MEMORY AFTER ASSEMBLY ^^^^^^^^^^^^^^^^^^^^^" << endl << endl;
 	printMemoryDump( );				
-	cout << "Assembly Complete" << endl;
+	cout << "^^^^^^^^^^^^^^^^^^^^^^^^^ OUTPUT OF CODE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << endl << endl;
 	runCode( );
+	cout << "^^^^^^^^^^^^^^^^^^^^^^^^^ MEMORY AFTER RUNCODE ^^^^^^^^^^^^^^^^^^^^^^" << endl << endl;
 	printMemoryDump( );
 	cout << endl;
 	system( "pause" );				//Needed for Windows Machines
@@ -253,7 +275,7 @@ void convertToMachineCode( ifstream &fin )
 		buildBotBits(commArr, machineCode, address);
 		address++;
 	}
-	if (command[0] == 'm' && isAddress(commArr[1]))	 			// The second arg is an address 
+	if (command[0] == 'm' && isAddress(commArr[1]))	 		// The second arg is an address 
 	{
 		machineCode = MOVMEM;
 		machineCode += (whichReg( oper2[0] ) << 3);
@@ -270,16 +292,49 @@ void convertToMachineCode( ifstream &fin )
 		buildBotBits(commArr, machineCode, address);
 		address++;
 	}
-	if (command[0] == 'c')
+	if (command == "sub")	 					//subtract
+	{
+		machineCode = SUB;
+		machineCode += (whichReg ( oper1[0] )) << 3;
+		buildBotBits(commArr, machineCode, address);
+		address++;
+	}
+	if (command == "and")	 					//logical and
+	{
+		machineCode = AND;
+		machineCode += (whichReg ( oper1[0] )) << 3;
+		buildBotBits(commArr, machineCode, address);
+		address++;
+	}
+	if (command == "or")	 					//logical or
+	{
+		machineCode = OR;
+		machineCode += (whichReg ( oper1[0] )) << 3;
+		buildBotBits(commArr, machineCode, address);
+		address++;
+	}
+	if (command[0] == 'c')						//compare
 	{
 		machineCode = COMPARE;
 		machineCode += (whichReg ( oper1[0] )) << 3;
 		buildBotBits(commArr, machineCode, address);
 		address++;
 	}
+	if (command[0] == 'j')						//jump instructions
+	{
+		machineCode = JUMP_INST;
+		jumpBuilder(commArr, machineCode, address);
+		address++;
+	}
 	if (command == "put")
 	{
 		machineCode = PUT;
+		memory[address] = machineCode;
+		address++;
+	}
+	if (command == "get")
+	{
+		machineCode = GET;
 		memory[address] = machineCode;
 		address++;
 	}
@@ -317,6 +372,53 @@ void buildBotBits(string commArr[], int &machineCode, int &address)
 			machineCode += whichReg(oper2[0]);
 			memory[address] = machineCode;
 		}
+}
+/******************************
+ * jumpBuilder
+ * Description: Processes the type of jump and builds the correct 
+ * 		memory values to input into memory
+ * Parameters:
+ * string command - the name of the jump in the asm file
+ * int address - the address pointer
+ * int machineCode - the machine code entry being built
+ */
+void jumpBuilder(string commArr[], int &machineCode, int &address)
+{
+	string command = commArr[0];
+	int targetAddress = stripBrackets(commArr[1]);
+
+		if(command == "je")
+		{
+			machineCode += JUMP_EQUAL;
+		}
+		if(command == "jne")
+		{
+			machineCode += JUMP_NOT_EQUAL;
+		}
+		if(command == "jb")
+		{
+			machineCode += JUMP_BELOW;
+		}
+		if(command == "jbe")
+		{
+			machineCode += JUMP_BELOW_EQ;
+		}
+		if(command == "ja")
+		{
+			machineCode += JUMP_ABOVE;
+		}
+		if(command == "jae")
+		{
+			machineCode += JUMP_ABOVE_EQ;
+		}
+		if(command == "jmp")
+		{
+			machineCode += JUMP;
+		}
+
+	memory[address] = machineCode;
+	address++;
+	memory[address] = targetAddress; 
 }
 /*********************************
  * stripBrackets
@@ -546,90 +648,35 @@ void runCode( )
 		topBits = (memory[address] & 224);	//Extract the bits from the machine code
 		midBits = (memory[address] & 24) >> 3;	//TODO Make this a standalone function
 		botBits = memory[address] & 7;
+		//cout << "DEBUG - Address: " << address << endl;
+		//cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
+		//DEBUG printMemoryDump();
 
 		if(topBits ==  MOVREG)
 		{
 			if(botBits == 0x07)
 			{
-				switch(midBits)
-				{
-					case(0):
-						regis.AX = memory[address+1];
-						break;
-					case(1):
-						regis.BX = memory[address+1];
-						break;
-					case(2):
-						regis.CX = memory[address+1];
-						break;
-					case(3):
-						regis.DX = memory[address+1];
-						break;
-				}
+				regis.setReg(memory[address+1], midBits);
 				address++;
 			}
 			else if(botBits == 0x06) 	//the command is to move from memory
 			{
 				targetAddress = memory[address+1];  //the target address is always in the next memory location
-				switch(midBits)
-				{
-					//TODO: Turn all these into a function
-					case(0):
-						regis.AX = memory[targetAddress];
-						break;
-					case(1):
-						regis.BX = memory[targetAddress];
-						break;
-					case(2):
-						regis.CX = memory[targetAddress];
-						break;
-					case(3):
-						regis.DX = memory[targetAddress];
-						break;
-				}
+				regis.setReg(memory[targetAddress], midBits);
 				address++;
 			}
 			else if(botBits <= 0x03) 			//The command is to move from a register
 			{
-				switch(midBits)
-				{
-					case(0):
-						regis.AX = memory[targetAddress];
-						break;
-					case(1):
-						regis.BX = memory[targetAddress];
-						break;
-					case(2):
-						regis.CX = memory[targetAddress];
-						break;
-					case(3):
-						regis.DX = memory[targetAddress];
-						break;
-				}
-				address++;
+				regis.setReg(regis.getReg(botBits), midBits);
 			}
 			address++;
 		}
 		if(topBits == MOVMEM)
 		{
-			if(botBits == 6) 				//The command is to move into an address
+			if(botBits == ADDRESS) 				//The command is to move into an address
 			{
 				targetAddress = memory[address + 1];
-				switch(midBits)
-				{
-					case(0):
-						memory[targetAddress] = regis.AX;
-						break;
-					case(1):
-						memory[targetAddress] = regis.BX;
-						break;
-					case(2):
-						memory[targetAddress] = regis.CX;
-						break;
-					case(3):
-						memory[targetAddress] = regis.DX;
-						break;
-				}
+				memory[targetAddress] = regis.getReg(midBits);
 				address++;
 			}
 			address++;
@@ -729,9 +776,20 @@ void runCode( )
 			{
 				if(botBits == PUT)
 				{
-					cout << "CONSOLE OUTPUT: " << regis.AX << endl;
+					cout << "CONSOLE OUTPUT: Contents of AX - " << regis.AX << endl;
+				}
+				if(botBits == GET)
+				{
+					cout << endl << endl;
+					cout << "CONSOLE INPUT: The program is requesting user input - : "; 
+					cin >> regis.AX;
+					cout << endl << endl << endl;
 				}
 				address++;
+			}
+			if(midBits == JUMP_INST >> 3)
+			{
+				doJump(botBits, address);
 			}
 		}
 	}
@@ -800,6 +858,88 @@ void setFlag(int reg, int botBits, int &address)
 		}
 	}
 }
+
+/******************************
+ * doJump
+ * Description:
+ * Handles the logic for all jump commands
+ * Parameters:
+ * int botBits - the bits containing the specific jump command
+ * int address - the address pointer
+ */
+void doJump( int botBits, int &address)
+{
+	int targetAddress = memory[address+1];
+
+	switch(botBits){
+		case(JUMP_EQUAL):
+			if(regis.flag == 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP_NOT_EQUAL):
+			if(regis.flag != 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP_BELOW):
+			if(regis.flag < 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP_BELOW_EQ):
+			if(regis.flag <= 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP_ABOVE):
+			if(regis.flag > 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP_ABOVE_EQ):
+			if(regis.flag >= 0)
+			{
+				address = targetAddress;
+			}
+			else
+			{
+				address += 2;
+			}
+			break;
+		case(JUMP):
+			address = targetAddress;
+			break;
+		default:
+			address += 2;
+	}
+}
+
 
 /******************************
  * doMath
