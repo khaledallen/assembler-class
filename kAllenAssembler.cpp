@@ -47,12 +47,12 @@ void changeToLowerCase(string &line);			//Converts .asm commands into lowercase
 bool isNumber(string string);				//Checks if input string is a number
 int stripBrackets(string address);			//Strips brackets from .asm input and returns the number contained
 bool isAddress(string string);				//Checks if input string is an address
-void buildBotBits(string oper2, int &machineCode, int &address); //Builds the bottom bits of the 2 operand instructions
+void buildBotBits(string oper2, int &machineCode); //Builds the bottom bits of the 2 operand instructions
 void setFlag(int reg, int botBits, int &address);	//Hangles the logic for the compare machine code
 int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, AND, ADD, and SUB machine code
 void jumpBuilder(string commArr[], int &machineCode, int &address);	//Builds jump commands for the assembly of the code
 void doJump( int botBits, int &address);		//Handles the logic for running Jump Code
-void functionBuilder(ifstream &fin, int numParams, int &address); //Builds the funtion in memory
+void functionBuilder(ifstream &fin, int numParams); //Builds the funtion in memory
 
 int main( )
 {
@@ -216,7 +216,7 @@ void convertToMachineCode( ifstream &fin )
 	{
 		machineCode = MOVREG;
 		machineCode += (whichReg( oper1[0] ) << 3);
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command[0] == 'm' && isAddress(commArr[1]))	 		// The second arg is an address 
@@ -233,35 +233,35 @@ void convertToMachineCode( ifstream &fin )
 	{
 		machineCode = ADD;
 		machineCode += (whichReg ( oper1[0] )) << 3;
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command == "sub")	 					//subtract
 	{
 		machineCode = SUB;
 		machineCode += (whichReg ( oper1[0] )) << 3;
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command == "and")	 					//logical and
 	{
 		machineCode = AND;
 		machineCode += (whichReg ( oper1[0] )) << 3;
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command == "or")	 					//logical or
 	{
 		machineCode = OR;
 		machineCode += (whichReg ( oper1[0] )) << 3;
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command[0] == 'c')						//compare
 	{
 		machineCode = COMPARE;
 		machineCode += (whichReg ( oper1[0] )) << 3;
-		buildBotBits(oper2, machineCode, address);
+		buildBotBits(oper2, machineCode);
 		address++;
 	}
 	if (command[0] == 'j')						//jump instructions
@@ -294,7 +294,7 @@ void convertToMachineCode( ifstream &fin )
 		machineCode = numParams;
 		memory[address] = machineCode;
 		address++;
-		functionBuilder(fin, numParams, address);
+		functionBuilder(fin, numParams);
 		
 	}
 
@@ -311,27 +311,14 @@ void convertToMachineCode( ifstream &fin )
 void functionBuilder(ifstream &fin, int numParams)
 {
 	string line;
+	int functionCode = 0x00;
 	for(int i = 0; i < numParams; i++)
 	{
 		getline(fin, line, '\n');
 		changeToLowerCase(line);
-		if(isNumber(line))
-		{
-			memory[address] = CONSTANT;
-			memory[address+1] = stoi(line);
-			address+=2;
-		}
-		else if (line[0] == '[')
-		{
-			memory[address] = ADDRESS;
-			memory[address+1] = stripBrackets(line);
-			address+=2;
-		}
-		else
-		{
-			memory[address] = whichReg(line[0]);
-			address++;
-		}
+		buildBotBits(line, functionCode);
+		address++;
+		functionCode = 0x00;
 	}
 }
 /****************************************
@@ -343,7 +330,7 @@ void functionBuilder(ifstream &fin, int numParams)
  * int addrss - the address pointer
  *
  */
-void buildBotBits(string oper2, int &machineCode, int &address)
+void buildBotBits(string oper2, int &machineCode)
 {
 		if(isNumber(oper2))
 		{
