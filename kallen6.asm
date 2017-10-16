@@ -1,0 +1,8 @@
+FUN [10] 6
+AX
+BX
+CX
+DX
+[99]
+59
+HALT

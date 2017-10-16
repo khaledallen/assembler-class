@@ -21,70 +21,13 @@
 #include <string>
 #include <ctype.h>
 
+#include "assembler.h"
+
 using namespace std;
-char ASM_FILE_NAME[] = "kallen5.asm";			// input filename, .asm
+char ASM_FILE_NAME[] = "kallen6.asm";			// input filename, .asm
 
 const int MAX = 150;  					//size of simulators memory
 const int COL = 7;    					//number of columns for output
-
-//Machine Code for the REGISTERS
-const int AXREG = 0;
-const int BXREG = 1;
-const int CXREG = 2;
-const int DXREG = 3;
-
-//Machine Code for OPERANDS
-const int CONSTANT = 0x07;				// 00000111
-const int ADDRESS = 0x06;				// 00000110
-
-/******************************
- * Machine Codes for Various Commands
- * Organized by Position in the command Bit
- */
-
-/* Top Bits */
-const int HALT = 0x05;					// 00000101
-const int MOVREG = 0xc0;				// 11000000
-const int ADD = 0xa0;					// 10100000
-const int SUB = 0x80;					// 10000000
-const int OR = 0x20;					// 00100000
-const int AND = 0x40;					// 01000000
-const int MOVMEM = 0xe0;				// 11100000
-const int COMPARE = 0x60;				// 01100000
-const int SPECIAL = 0x00;				// 00000000
-
-/* Mid Bits */
-const int ZERO_OPS = 0x00;				// 00000000
-const int JUMP_INST = 0x08;				// 00001000
-
-/* Bottom Bits */
-const int PUT = 0x07;					// 00000111
-const int GET = 0x06;					// 00000110
-const int JUMP_EQUAL = 0x00;				// 00000000
-const int JUMP_NOT_EQUAL = 0x01;			// 00000001
-const int JUMP_BELOW = 0x02;				// 00000010
-const int JUMP_BELOW_EQ = 0x03;				// 00000011
-const int JUMP_ABOVE = 0x04;				// 00000100
-const int JUMP_ABOVE_EQ = 0x05;				// 00000101
-const int JUMP = 0x06;					// 00000110
-
-enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
-
-typedef short int Memory;
-
-class Registers						//Class defines object to hold
-{							//all registers, flags, instruction ptr
-public:
-	int AX;						//Holds current value of registers
-	int BX;
-	int CX;
-	int DX;
-	int instrAddr;					//Address of current instruction
-	int flag;					//Current value of flag
-
-	int getReg(int i);				//Takes the machine code value of a register and returns its value
-	void setReg(int input, int reg);		//Sets the given register index to the providede value
-}regis;
 
 Memory memory[MAX] = {0};				//Array of size MAX, simulates memory of computer
 int address;						//The current address the assembler is looking at
@@ -109,6 +52,7 @@ void setFlag(int reg, int botBits, int &address);	//Hangles the logic for the co
 int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, AND, ADD, and SUB machine code
 void jumpBuilder(string commArr[], int &machineCode, int &address);	//Builds jump commands for the assembly of the code
 void doJump( int botBits, int &address);		//Handles the logic for running Jump Code
+void functionBuilder(ifstream &fin, int numParams, int &address); //Builds the funtion in memory
 
 int main( )
 {
@@ -337,6 +281,58 @@ void convertToMachineCode( ifstream &fin )
 		machineCode = GET;
 		memory[address] = machineCode;
 		address++;
+	}
+	if (command == "fun")
+	{
+		machineCode = FUN;
+		memory[address] = machineCode;
+		address++;
+		machineCode = stripBrackets(oper1);
+		memory[address] = machineCode;
+		address++;
+		int numParams = stoi(oper2);
+		machineCode = numParams;
+		memory[address] = machineCode;
+		address++;
+		functionBuilder(fin, numParams, address);
+		
+	}
+
+}
+/****************************************
+ * functionBuilder
+ * Description: Builds the machine code for functions
+ * Parameters:
+ * numParams - the number of parameters in the function
+ * fin - the input file stream from the asm file
+ * address - the address pointer in memory
+ * Return - n/a. Modifies memory[] by inserting machinecode
+ * for the function
+ */
+void functionBuilder(ifstream &fin, int numParams, int &address)
+{
+	string line;
+	for(int i = 0; i < numParams; i++)
+	{
+		getline(fin, line, '\n');
+		changeToLowerCase(line);
+		if(isNumber(line))
+		{
+			memory[address] = CONSTANT;
+			memory[address+1] = stoi(line);
+			address+=2;
+		}
+		else if (line[0] == '[')
+		{
+			memory[address] = ADDRESS;
+			memory[address+1] = stripBrackets(line);
+			address+=2;
+		}
+		else
+		{
+			memory[address] = whichReg(line[0]);
+			address++;
+		}
 	}
 }
 /****************************************
@@ -654,18 +650,18 @@ void runCode( )
 
 		if(topBits ==  MOVREG)
 		{
-			if(botBits == 0x07)
+			if(botBits == CONSTANT)
 			{
 				regis.setReg(memory[address+1], midBits);
 				address++;
 			}
-			else if(botBits == 0x06) 	//the command is to move from memory
+			else if(botBits == ADDRESS) 	//the command is to move from memory
 			{
 				targetAddress = memory[address+1];  //the target address is always in the next memory location
 				regis.setReg(memory[targetAddress], midBits);
 				address++;
 			}
-			else if(botBits <= 0x03) 			//The command is to move from a register
+			else	 			//The command is to move from a register
 			{
 				regis.setReg(regis.getReg(botBits), midBits);
 			}

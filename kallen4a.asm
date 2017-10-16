@@ -1,0 +1,20 @@
+MOV CX [22]
+MOV BX [23]
+CMP CX BX
+JBE [10]
+MOV AX CX
+JMP [11]
+MOV AX BX
+PUT
+HALT
+
+
+
+
+
+
+
+
+
+50
+30
