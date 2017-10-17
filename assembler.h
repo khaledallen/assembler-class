@@ -52,10 +52,12 @@ public:
 	int BX;
 	int CX;
 	int DX;
+	int EX;						//Stack pointer
 	int instrAddr;					//Address of current instruction
 	int flag;					//Current value of flag
 
 	int getReg(int i);				//Takes the machine code value of a register and returns its value
 	void setReg(int input, int reg);		//Sets the given register index to the providede value
+	void pushStack( int reg);				//Leverages the stack pointer to build the stack
 }regis;
 

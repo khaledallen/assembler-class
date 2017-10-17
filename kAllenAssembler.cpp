@@ -53,6 +53,7 @@ int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, A
 void jumpBuilder(string commArr[], int &machineCode, int &address);	//Builds jump commands for the assembly of the code
 void doJump( int botBits, int &address);		//Handles the logic for running Jump Code
 void functionBuilder(ifstream &fin, int numParams); //Builds the funtion in memory
+void registerDump();					//Dumps the registers, flag, and return address onto the stack
 
 int main( )
 {
@@ -116,7 +117,18 @@ void Registers::setReg(int input, int reg)
 			 break;
 	}
 }
-
+/******************************
+* void Registers::pushStack(reg)
+* Description:
+* Builds the stack using the stack pointer
+* Paramters:
+* reg - the register name to be put into the stack
+*/
+void Registers::pushStack( int val)
+{
+	memory[EX] = val;
+	EX--;
+}
 			
 /************************************************************/
 /*fillMemory						    */
@@ -620,6 +632,7 @@ bool isNumber(string string)
 void runCode( )
 {
 	address = 0;					//start address counter back at 0
+	regis.EX = MAX - 1;					//Set the stack pointer to the end of memory
 	int topBits, midBits, botBits;			//variables to hold the pieces of the machine code instructions
 	int targetAddress;				//variable to hold addresses
 	while(memory[address] != HALT) 			//run until HALT command encountered
@@ -627,9 +640,11 @@ void runCode( )
 		topBits = (memory[address] & 224);	//Extract the bits from the machine code
 		midBits = (memory[address] & 24) >> 3;	//TODO Make this a standalone function
 		botBits = memory[address] & 7;
-		//cout << "DEBUG - Address: " << address << endl;
-		//cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
-		//DEBUG printMemoryDump();
+		cout << "DEBUG - Address: " << address << endl;
+		cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
+		printMemoryDump();
+		int temp;
+		cin >> temp;
 
 		if(topBits ==  MOVREG)
 		{
@@ -764,6 +779,11 @@ void runCode( )
 					cin >> regis.AX;
 					cout << endl << endl << endl;
 				}
+				if(botBits == FUN)
+				{
+					registerDump();
+					address+=2;
+				}
 				address++;
 			}
 			if(midBits == JUMP_INST >> 3)
@@ -778,6 +798,22 @@ void runCode( )
  * Run Code Utility Function
  */
 
+/******************************
+ * registerDump()
+ * Description:
+ * Dumps the registers into the stack and sets the return address
+ * Parameters:
+ * None
+ */
+void registerDump()
+{
+	regis.pushStack(regis.AX);
+	regis.pushStack(regis.BX);
+	regis.pushStack(regis.CX);
+	regis.pushStack(regis.DX);
+	regis.pushStack(regis.flag);
+	regis.pushStack(address);
+}
 /******************************
  * void setFlag
  * Description:
