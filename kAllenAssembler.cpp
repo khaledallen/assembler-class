@@ -47,13 +47,14 @@ void changeToLowerCase(string &line);			//Converts .asm commands into lowercase
 bool isNumber(string string);				//Checks if input string is a number
 int stripBrackets(string address);			//Strips brackets from .asm input and returns the number contained
 bool isAddress(string string);				//Checks if input string is an address
-void buildBotBits(string oper2, int &machineCode); //Builds the bottom bits of the 2 operand instructions
+void buildBotBits(string oper2, int &machineCode);      //Builds the bottom bits of the 2 operand instructions
 void setFlag(int reg, int botBits, int &address);	//Hangles the logic for the compare machine code
-int doMath( int arg1, int arg2, int operation);	//Handles the logic fo the OR, AND, ADD, and SUB machine code
+int doMath( int arg1, int arg2, int operation);	        //Handles the logic fo the OR, AND, ADD, and SUB machine code
 void jumpBuilder(string commArr[], int &machineCode, int &address);	//Builds jump commands for the assembly of the code
 void doJump( int botBits, int &address);		//Handles the logic for running Jump Code
-void functionBuilder(ifstream &fin, int numParams); //Builds the funtion in memory
+void functionBuilder(ifstream &fin, int numParams);     //Builds the funtion in memory
 void registerDump();					//Dumps the registers, flag, and return address onto the stack
+void registerRestore();					//Restores the state after a function
 
 int main( )
 {
@@ -115,6 +116,8 @@ void Registers::setReg(int input, int reg)
 			 break;
 		case(3): DX = input;
 			 break;
+		case(4): EX = input;
+			 break;
 	}
 }
 /******************************
@@ -126,8 +129,21 @@ void Registers::setReg(int input, int reg)
 */
 void Registers::pushStack( int val)
 {
-	memory[EX] = val;
 	EX--;
+	memory[EX] = val;
+}
+
+/******************************
+ * void Registers::popStack();
+ * Description:
+ * Decrements EX and clears what it was pointing to
+ * Parameters:
+ * None
+ */
+void Registers::popStack()
+{
+	memory[EX] = 0x00;
+	EX++;
 }
 			
 /************************************************************/
@@ -308,6 +324,15 @@ void convertToMachineCode( ifstream &fin )
 		address++;
 		functionBuilder(fin, numParams);
 		
+	}
+	if (command == "ret")
+	{
+		machineCode = RET;
+		memory[address] = machineCode;
+		address++;
+		machineCode = stripBrackets(oper1);
+		memory[address] = machineCode;
+		address++;
 	}
 
 }
@@ -632,7 +657,7 @@ bool isNumber(string string)
 void runCode( )
 {
 	address = 0;					//start address counter back at 0
-	regis.EX = MAX - 1;					//Set the stack pointer to the end of memory
+	regis.EX = MAX;					//Set the stack pointer to the end of memory
 	int topBits, midBits, botBits;			//variables to hold the pieces of the machine code instructions
 	int targetAddress;				//variable to hold addresses
 	while(memory[address] != HALT) 			//run until HALT command encountered
@@ -640,11 +665,11 @@ void runCode( )
 		topBits = (memory[address] & 224);	//Extract the bits from the machine code
 		midBits = (memory[address] & 24) >> 3;	//TODO Make this a standalone function
 		botBits = memory[address] & 7;
-		cout << "DEBUG - Address: " << address << endl;
-		cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
-		printMemoryDump();
-		int temp;
-		cin >> temp;
+		//cout << "DEBUG - Address: " << address << endl;
+		//cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
+		//printMemoryDump();
+		//int temp;
+		//cin >> temp;
 
 		if(topBits ==  MOVREG)
 		{
@@ -774,15 +799,45 @@ void runCode( )
 				}
 				if(botBits == GET)
 				{
-					cout << endl << endl;
+					cout << endl;
 					cout << "CONSOLE INPUT: The program is requesting user input - : "; 
 					cin >> regis.AX;
-					cout << endl << endl << endl;
+					cout << endl;
 				}
 				if(botBits == FUN)
 				{
+					address++;
+					int targetAddress = memory[address];
+					address++;
+					int numParam = memory[address];
+					address++;
+					for(int i = 0; i < numParam; i++)
+					{
+						if(memory[address] == CONSTANT) 
+						{
+							address++;
+							memory[targetAddress - (1 + i)] = memory[address];
+						}
+						else if (memory[address] == ADDRESS)
+						{
+							address++;
+							memory[targetAddress - (1 + i)] = memory[address];
+						}
+						else
+						{
+							memory[targetAddress - (1 + i)] = memory[address];
+						}
+						address++;
+					}
 					registerDump();
-					address+=2;
+					address = targetAddress;
+					continue;			//Stop the loop and pass control to the function
+				}
+				if(botBits == RET)
+				{
+					memory[memory[address+1]] = regis.AX;
+					registerRestore();
+					continue;
 				}
 				address++;
 			}
@@ -814,6 +869,29 @@ void registerDump()
 	regis.pushStack(regis.flag);
 	regis.pushStack(address);
 }
+/******************************
+ * registerRestore()
+ * Description:
+ * Restores the register state after a function is done running
+ * Parameters:
+ * None
+ */
+void registerRestore()
+{
+	address = memory[regis.EX];
+	regis.popStack();
+	regis.flag = memory[regis.EX];
+	regis.popStack();
+	regis.DX = memory[regis.EX];
+	regis.popStack();
+	regis.CX = memory[regis.EX];
+	regis.popStack();
+	regis.BX = memory[regis.EX];
+	regis.popStack();
+	regis.AX = memory[regis.EX];
+	regis.popStack();
+}
+
 /******************************
  * void setFlag
  * Description:
@@ -998,7 +1076,13 @@ int doMath( int arg1, int arg2, int operation)
 
 /****************************
  * TODO s
+ * - Functions always return what is in the AX register
+ * - At the end of the function, RET [xxxx]
+ * - A void function will still take an address for RET (but you don't have to use it)
  * - Add the ability to put constants into memory addresses: MOV [xxxx] CONST
+ * - Condense some of the Assembler code into functions
  * - Convert the bit extraction into a standalone function
+ * - Add labels handling
+ * - Add comments handling
  * + Convert all the register switch statements into a function or class method
  */

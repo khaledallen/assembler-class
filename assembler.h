@@ -40,6 +40,7 @@ const int JUMP_ABOVE = 0x04;				// 00000100
 const int JUMP_ABOVE_EQ = 0x05;				// 00000101
 const int JUMP = 0x06;					// 00000110
 const int FUN = 0x03;					// 00000011
+const int RET = 0x04;					// 00000100
 
 enum paramType {reg, mem, constant, arrayBx, arrayBxPlus, none};
 
@@ -58,6 +59,7 @@ public:
 
 	int getReg(int i);				//Takes the machine code value of a register and returns its value
 	void setReg(int input, int reg);		//Sets the given register index to the providede value
-	void pushStack( int reg);				//Leverages the stack pointer to build the stack
+	void pushStack( int reg);			//Leverages the stack pointer to build the stack
+	void popStack();				//Decrements EX and clears memory
 }regis;
 
