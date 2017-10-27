@@ -31,6 +31,7 @@ const int COL = 7;    					//number of columns for output
 
 Memory memory[MAX] = {0};				//Array of size MAX, simulates memory of computer
 int address;						//The current address the assembler is looking at
+bool debug = false;
 
 /*********************
  * Function Prototype List
@@ -55,6 +56,7 @@ void doJump( int botBits, int &address);		//Handles the logic for running Jump C
 void functionBuilder(ifstream &fin, int numParams);     //Builds the funtion in memory
 void registerDump();					//Dumps the registers, flag, and return address onto the stack
 void registerRestore();					//Restores the state after a function
+void cleanLine( string &line );				//Cleans comments
 
 int main( )
 {
@@ -180,6 +182,7 @@ void fillMemory( )
 void splitCommand( string &line, string &command )
 {
 	int space = line.find( ' ' );				//the position of the first space in the command
+
 	if(space != -1)
 	{
 		command = line.substr( 0, space );
@@ -189,6 +192,27 @@ void splitCommand( string &line, string &command )
 		line = "";
 	}
 }
+/***************************************************/
+/* cleanLine()
+ * Description:
+ * Stips comments from lines by searching for tabs or repeated spaces
+ * Parameters:
+ * line - MODIFIED, is the line to be cleaned
+ */
+void cleanLine( string &line )
+{
+	if(line.find(';') == 0)
+	{
+		line = "";
+	}
+	char tab = '\t';
+	string spaces = "  ";
+	int tabLoc = line.find(tab);
+	int spacesLoc = line.find(spaces);
+	line = line.substr(0, tabLoc);
+	line = line.substr(0,spacesLoc);
+}
+
 /***************************************************/
 /* convertToMachineCode
  * Description:
@@ -205,6 +229,7 @@ void convertToMachineCode( ifstream &fin )
 	int machineCode = 0;					//start building the machine code
 	getline( fin, line, '\n' );
 	changeToLowerCase( line );
+	cleanLine(line);
 
 	int i = 0;						//i is the number of arguments found
 	while( line.length() > 0 && i < 3)
@@ -353,6 +378,7 @@ void functionBuilder(ifstream &fin, int numParams)
 	{
 		getline(fin, line, '\n');
 		changeToLowerCase(line);
+		cleanLine(line);
 		buildBotBits(line, functionCode);
 		address++;
 		functionCode = 0x00;
@@ -665,11 +691,14 @@ void runCode( )
 		topBits = (memory[address] & 224);	//Extract the bits from the machine code
 		midBits = (memory[address] & 24) >> 3;	//TODO Make this a standalone function
 		botBits = memory[address] & 7;
-		//cout << "DEBUG - Address: " << address << endl;
-		//cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
-		//printMemoryDump();
-		//int temp;
-		//cin >> temp;
+		if(debug){
+
+			cout << "DEBUG - Address: " << address << endl;
+			cout << "DEBUG - topBits: " << topBits << endl << "DEBUG - midBits: " << midBits << endl << "DEBUG - botBits: " << botBits << endl;
+			printMemoryDump();
+			int temp;
+			cin >> temp;
+		}
 
 		if(topBits ==  MOVREG)
 		{
