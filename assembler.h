@@ -8,6 +8,8 @@ const int DXREG = 3;
 //Machine Code for OPERANDS
 const int CONSTANT = 0x07;				// 00000111
 const int ADDRESS = 0x06;				// 00000110
+const int REL_ADDRESS = 0x05;				// 00000101
+const int REF_ADDRESS = 0x04;				// 00000100
 
 /******************************
  * Machine Codes for Various Commands

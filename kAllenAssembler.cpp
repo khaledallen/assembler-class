@@ -24,7 +24,9 @@
 #include "assembler.h"
 
 using namespace std;
-char ASM_FILE_NAME[] = "kallen6.asm";			// input filename, .asm
+//char ASM_FILE_NAME[] = "midterm1.asm";			// input filename, .asm
+string ASM_FILE_NAME;
+
 
 const int MAX = 150;  					//size of simulators memory
 const int COL = 7;    					//number of columns for output
@@ -57,9 +59,12 @@ void functionBuilder(ifstream &fin, int numParams);     //Builds the funtion in 
 void registerDump();					//Dumps the registers, flag, and return address onto the stack
 void registerRestore();					//Restores the state after a function
 void cleanLine( string &line );				//Cleans comments
+int getRelativeAddress( string command);		//Interprets value of [BX + xxxx]
 
 int main( )
 {
+	cout << "Enter file name" << endl;
+	cin >> ASM_FILE_NAME;
 	cout << "Initial Memory State" << endl;
 	printMemoryDump( );				//Print initial memory state (should be all 0's)
 	fillMemory( );					//Assemble code and fill memory
@@ -319,6 +324,7 @@ void convertToMachineCode( ifstream &fin )
 	}
 	if (command[0] == 'j')						//jump instructions
 	{
+		cout << "jump detected" << endl;
 		machineCode = JUMP_INST;
 		jumpBuilder(commArr, machineCode, address);
 		address++;
@@ -404,10 +410,27 @@ void buildBotBits(string oper2, int &machineCode)
 		}
 		else if(isAddress(oper2))
 		{
-			machineCode += ADDRESS;
-			memory[address] = machineCode;
-			address++;
-			memory[address] = stripBrackets(oper2);
+			if(oper2[1] == 'b')
+			{
+				if(oper2.find('+') != string::npos)
+				{
+					machineCode += REL_ADDRESS;
+					memory[address] = machineCode;
+					address++;
+					memory[address] = getRelativeAddress(oper2);
+				}
+				else
+				{
+					machineCode += REF_ADDRESS;
+					memory[address] = machineCode;
+				}
+			}
+			else {
+				machineCode += ADDRESS;
+				memory[address] = machineCode;
+				address++;
+				memory[address] = stripBrackets(oper2);
+			}
 		}
 		else
 		{
@@ -485,6 +508,23 @@ int stripBrackets(string address)
 	return stoi(temp);
 }	
 	
+/****************************************
+ * getRelativeAddress
+ * Description:
+ * Gets the number of the relative address passed in [BX + xxxxx]
+ * Parameters:
+ * command - a string of the form [BX + xxxxx]
+ * Returns:
+ * An integer of xxxx
+ */
+int getRelativeAddress(string command)
+{
+	int place = command.find('+');
+	int end = command.find(']');
+	string adr = command.substr(place+1, end);
+	int val = stoi(adr);
+	return val;
+}
 
 /************************************************************
  * whichReg

@@ -1,0 +1,15 @@
+GET
+ADD CX 2
+CMP CX AX
+JB [1]
+JA [12]
+JE [17]
+
+
+MOV AX 1
+PUT
+HALT
+
+MOV AX 0
+PUT
+HALT
