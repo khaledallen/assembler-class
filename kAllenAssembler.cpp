@@ -281,11 +281,31 @@ void convertToMachineCode( ifstream &fin )
 	{
 		machineCode = MOVMEM;
 		machineCode += (whichReg( oper2[0] ) << 3);
-		machineCode += ADDRESS;
-		memory[address] = machineCode;
-		address++;
-		memory[address] = stripBrackets(commArr[1]);
-		address++;
+		if(oper1[1] == 'b')
+		{
+			if(oper1.find('+') != string::npos)
+			{
+				machineCode += REL_ADDRESS;
+				memory[address] = machineCode;
+				address++;
+				memory[address] = getRelativeAddress(oper1);
+				address++;
+			}
+			else
+			{
+				machineCode += REF_ADDRESS;
+				memory[address] = machineCode;
+				address++;
+			}
+		}
+		else
+		{
+			machineCode += ADDRESS;
+			memory[address] = machineCode;
+			address++;
+			memory[address] = stripBrackets(commArr[1]);
+			address++;
+		}
 	}
 	if (command == "add")	 					//add
 	{
@@ -324,7 +344,6 @@ void convertToMachineCode( ifstream &fin )
 	}
 	if (command[0] == 'j')						//jump instructions
 	{
-		cout << "jump detected" << endl;
 		machineCode = JUMP_INST;
 		jumpBuilder(commArr, machineCode, address);
 		address++;
@@ -497,6 +516,7 @@ void jumpBuilder(string commArr[], int &machineCode, int &address)
 int stripBrackets(string address)
 {
 	string temp;						//a string to hold the chars between the brackets
+	cout << "stripping " << address << endl;
 	int i = 0;
 
 	for(i = 0; i < address.length(); i++) {
@@ -521,7 +541,7 @@ int getRelativeAddress(string command)
 {
 	int place = command.find('+');
 	int end = command.find(']');
-	string adr = command.substr(place+1, end);
+	string adr = command.substr(place+1, end-1);
 	int val = stoi(adr);
 	return val;
 }
@@ -753,6 +773,17 @@ void runCode( )
 				regis.setReg(memory[targetAddress], midBits);
 				address++;
 			}
+			else if(botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address+1]; //the target address is in BX plus the next memory location
+				regis.setReg(memory[targetAddress], midBits);
+				address ++;
+			}
+			else if(botBits == REF_ADDRESS)
+			{
+				targetAddress = regis.BX;
+				regis.setReg(memory[targetAddress], midBits);
+			}
 			else	 			//The command is to move from a register
 			{
 				regis.setReg(regis.getReg(botBits), midBits);
@@ -764,9 +795,19 @@ void runCode( )
 			if(botBits == ADDRESS) 				//The command is to move into an address
 			{
 				targetAddress = memory[address + 1];
-				memory[targetAddress] = regis.getReg(midBits);
 				address++;
 			}
+			else if (botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address + 1];
+				address++;
+			}
+			else
+			{
+				targetAddress = regis.BX;
+				memory[targetAddress] = regis.getReg(midBits);
+			}
+			memory[targetAddress] = regis.getReg(midBits);
 			address++;
 		}
 		if(topBits == ADD)
@@ -779,9 +820,20 @@ void runCode( )
 			}
 			else if(botBits == ADDRESS)
 			{
-				int targetAddress = memory[address+1];
+				targetAddress = memory[address+1];
 				input = doMath(regis.getReg(midBits), memory[targetAddress], ADD);
 				address++;
+			}
+			else if(botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address+1]; //the target address is in BX plus the next memory location
+				input = doMath(regis.getReg(midBits), memory[targetAddress], ADD);
+				address ++;
+			}
+			else if(botBits == REF_ADDRESS)
+			{
+				targetAddress = regis.BX;
+				input = doMath(regis.getReg(midBits), memory[targetAddress], ADD);
 			}
 			else
 			{
@@ -800,9 +852,20 @@ void runCode( )
 			}
 			else if(botBits == ADDRESS)
 			{
-				int targetAddress = memory[address+1];
+				targetAddress = memory[address+1];
 				input = doMath(regis.getReg(midBits), memory[targetAddress], SUB);
 				address++;
+			}
+			else if(botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address+1]; //the target address is in BX plus the next memory location
+				input = doMath(regis.getReg(midBits), memory[targetAddress], SUB);
+				address ++;
+			}
+			else if(botBits == REF_ADDRESS)
+			{
+				targetAddress = regis.BX;
+				input = doMath(regis.getReg(midBits), memory[targetAddress], SUB);
 			}
 			else
 			{
@@ -825,6 +888,17 @@ void runCode( )
 				input = doMath(regis.getReg(midBits), memory[targetAddress], OR);
 				address++;
 			}
+			else if(botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address+1]; //the target address is in BX plus the next memory location
+				input = doMath(regis.getReg(midBits), memory[targetAddress], OR);
+				address ++;
+			}
+			else if(botBits == REF_ADDRESS)
+			{
+				targetAddress = regis.BX;
+				input = doMath(regis.getReg(midBits), memory[targetAddress], OR);
+			}
 			else
 			{
 				input = doMath(regis.getReg(midBits), regis.getReg(botBits), OR);
@@ -845,6 +919,17 @@ void runCode( )
 				int targetAddress = memory[address+1];
 				input = doMath(regis.getReg(midBits), memory[targetAddress], AND);
 				address++;
+			}
+			else if(botBits == REL_ADDRESS)
+			{
+				targetAddress = regis.BX + memory[address+1];
+				input = doMath(regis.getReg(midBits), memory[targetAddress], AND);
+				address ++;
+			}
+			else if(botBits == REF_ADDRESS)
+			{
+				targetAddress = regis.BX;
+				input = doMath(regis.getReg(midBits), memory[targetAddress], AND);
 			}
 			else
 			{
@@ -876,7 +961,7 @@ void runCode( )
 				if(botBits == FUN)
 				{
 					address++;
-					int targetAddress = memory[address];
+					targetAddress = memory[address];
 					address++;
 					int numParam = memory[address];
 					address++;
@@ -891,6 +976,15 @@ void runCode( )
 						{
 							address++;
 							memory[targetAddress - (1 + i)] = memory[address];
+						}
+						else if (memory[address] == REL_ADDRESS)
+						{
+							address++;
+							memory[targetAddress - (1 + i)] = memory[regis.BX + memory[address]];
+						}
+						else if (memory[address] == REF_ADDRESS)
+						{
+							memory[targetAddress - (1 + i)] = memory[regis.BX];
 						}
 						else
 						{
@@ -989,9 +1083,21 @@ void setFlag(int reg, int botBits, int &address)
 		}
 		address++;
 	}
-	else if(botBits == ADDRESS)
+	else if(botBits == ADDRESS || REL_ADDRESS || REF_ADDRESS)
 	{
-		int targetAddress = memory[address+1];
+		int targetAddress;
+		if(botBits == ADDRESS) {
+			targetAddress = memory[address+1];
+			address++;
+		}
+		if(botBits == REL_ADDRESS) {
+			targetAddress = regis.BX + memory[address+1];
+			address++;
+		}
+		if(botBits == REF_ADDRESS) {
+			targetAddress = regis.BX;
+		}
+
 		if(reg > memory[targetAddress])
 		{
 			regis.flag = 1;
@@ -1004,7 +1110,6 @@ void setFlag(int reg, int botBits, int &address)
 		{
 			regis.flag = 0;
 		}
-		address++;
 	}
 	else
 	{
