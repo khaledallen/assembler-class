@@ -28,7 +28,7 @@ using namespace std;
 string ASM_FILE_NAME;
 
 
-const int MAX = 150;  					//size of simulators memory
+const int MAX = 300;  					//size of simulators memory
 const int COL = 7;    					//number of columns for output
 
 Memory memory[MAX] = {0};				//Array of size MAX, simulates memory of computer
@@ -1083,7 +1083,7 @@ void setFlag(int reg, int botBits, int &address)
 		}
 		address++;
 	}
-	else if(botBits == ADDRESS || REL_ADDRESS || REF_ADDRESS)
+	else if(botBits == ADDRESS ||botBits ==  REL_ADDRESS || botBits == REF_ADDRESS)
 	{
 		int targetAddress;
 		if(botBits == ADDRESS) {
