@@ -1,6 +1,6 @@
 FUN [30] 2
-200
-206
+200             ;array start
+206             ;array end addr
 FUN [60] 2
 200
 206
@@ -16,7 +16,7 @@ HALT
 
 
 
-MOV BX [29]
+MOV BX [29]     ;get array
 MOV CX [28]
 GET
 CMP AX 0
@@ -38,11 +38,11 @@ RET [27]
 
 
 
-MOV BX [59]     ;get start of array
-CMP BX [58]       ;check array pointer
-JE [84]          ;if less than array, proceed
-MOV CX [BX+1]   ;get next value
-CMP CX [BX]     ;compare
+MOV BX [59]     ;sort array
+CMP BX [58]       
+JE [84]          
+MOV CX [BX+1]   
+CMP CX [BX]     
 JAE [80]
 MOV AX [BX]
 MOV [BX] CX
@@ -62,7 +62,7 @@ RET [57]
 
 
 
-MOV BX [99]
+MOV BX [99]     ;print array
 MOV AX [BX]
 PUT
 CMP BX [98]
